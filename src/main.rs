@@ -64,9 +64,8 @@ fn main() -> eyre::Result<()> {
                     circuit_path =
                         format!("circuits/{}/{}/circuit.txt", algorithm_type, field_type);
                     private_path =
-                        format!("circuits/{}/{}/private_input.txt", algorithm_type, field_type);
-                    public_path =
-                        format!("circuits/{}/{}/private_input.txt", algorithm_type, field_type);
+                        format!("circuits/{}/{}/private.txt", algorithm_type, field_type);
+                    public_path = format!("circuits/{}/{}/private.txt", algorithm_type, field_type);
                     output_prefix = format!("{}_{}", algorithm_type, field_type);
                 }
                 _ => {
@@ -78,8 +77,7 @@ fn main() -> eyre::Result<()> {
             let output_path = format!("results/proofs/{}.json", output_prefix);
 
             // Run proof with the selected circuit
-            let result =
-                prove::prove_with_paths(&circuit_path, &private_path, &public_path, &output_path)?;
+            let result = prove::prove(&circuit_path, &private_path, &public_path, &output_path)?;
 
             Ok(result)
         }
@@ -119,8 +117,7 @@ fn main() -> eyre::Result<()> {
                 "Running prove with algorithm: {}, field: {}, circuit: {}",
                 algorithm_type, field_type, circuit_type
             );
-            let result =
-                prove::prove_with_paths(&circuit_path, &private_path, &public_path, &output_path)?;
+            let result = prove::prove(&circuit_path, &private_path, &public_path, &output_path)?;
             Ok(result)
         }
     }

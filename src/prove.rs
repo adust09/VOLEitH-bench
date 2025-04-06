@@ -1,38 +1,10 @@
 use eyre::{Result, WrapErr};
 use merlin::Transcript;
 use rand::thread_rng;
-use schmivitz::parameters::FIELD_SIZE;
 use schmivitz::{insecure::InsecureVole, Proof};
 use std::{fs, io::Cursor, path::Path};
 
-#[allow(dead_code)]
-pub fn main() -> Result<()> {
-    let field_type = match FIELD_SIZE {
-        2 => ("F_2", "f2"),
-        _ => return Err(eyre::eyre!("Unsupported field size: {}", FIELD_SIZE)),
-    };
-
-    println!("Using {} ({} field) implementation", field_type.0, field_type.1);
-    prove(field_type.1, "proof.json")?;
-
-    Ok(())
-}
-
-#[allow(dead_code)]
-pub fn prove(field: &str, proof_output_path: &str) -> Result<()> {
-    let circuit_path_str = format!("src/circuits/poseidon/{}/poseidon.txt", field);
-    let private_input_path_str = format!("src/circuits/poseidon/{}/poseidon_private.txt", field);
-    let public_input_path_str = format!("src/circuits/poseidon/{}/poseidon_public.txt", field);
-
-    prove_with_paths(
-        &circuit_path_str,
-        &private_input_path_str,
-        &public_input_path_str,
-        proof_output_path,
-    )
-}
-
-pub fn prove_with_paths(
+pub fn prove(
     circuit_path_str: &str,
     private_input_path_str: &str,
     public_input_path_str: &str,
