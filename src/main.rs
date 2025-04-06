@@ -65,7 +65,7 @@ fn main() -> eyre::Result<()> {
                         format!("circuits/{}/{}/circuit.txt", algorithm_type, field_type);
                     private_path =
                         format!("circuits/{}/{}/private.txt", algorithm_type, field_type);
-                    public_path = format!("circuits/{}/{}/private.txt", algorithm_type, field_type);
+                    public_path = format!("circuits/{}/{}/public.txt", algorithm_type, field_type);
                     output_prefix = format!("{}_{}", algorithm_type, field_type);
                 }
                 _ => {
