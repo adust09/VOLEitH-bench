@@ -8,7 +8,7 @@ debug = true
 lto = true
 
 [dependencies]
-schmivitz = { git = "https://github.com/adust09/swanky", rev="20eb06c698d3e3dbd4b15343143273f053d82daf"}
+schmivitz = { git = "https://github.com/adust09/swanky", rev="5e770e1a68db2c9a11f8a79c5ff5523a6b489ef8"}
 
 eyre = "0.6.12"
 rand = "0.8.5"
@@ -24,4 +24,8 @@ criterion = { version = "0.5", features = ["html_reports"] }
 
 [[bench]]
 name = "poseidon_f2_benches"
+harness = false
+
+[[bench]]
+name = "keccak_f_benches"
 harness = false
