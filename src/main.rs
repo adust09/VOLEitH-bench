@@ -13,6 +13,9 @@ struct Cli {
 enum Commands {
     Prove {
         #[arg(short, long)]
+        algorithm: Option<String>,
+
+        #[arg(short, long)]
         field: Option<String>,
 
         #[arg(short, long)]
@@ -24,60 +27,97 @@ fn main() -> eyre::Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Some(Commands::Prove { field, circuit }) => {
+        Some(Commands::Prove { algorithm, field, circuit }) => {
+            let algorithm_type = algorithm.as_deref().unwrap_or("poseidon");
             let field_type = field.as_deref().unwrap_or("f2");
-            let circuit_type = circuit.as_deref().unwrap_or("single");
 
-            println!("Running prove with field: {}, circuit: {}", field_type, circuit_type);
+            // Circuit paths and output prefix
+            let (circuit_path, private_path, public_path, output_prefix);
 
-            // Different output paths based on circuit type
-            let (circuit_path, private_path, public_path, output_prefix) = (
-                format!("circuits/poseidon/{}/{}/circuit.txt", field_type, circuit_type),
-                format!("circuits/poseidon/{}/{}/private.txt", field_type, circuit_type),
-                format!("circuits/poseidon/{}/{}/public.txt", field_type, circuit_type),
-                format!("{}_{}", field_type, circuit_type),
-            );
+            match algorithm_type {
+                "poseidon" => {
+                    let circuit_type = circuit.as_deref().unwrap_or("single");
+                    println!(
+                        "Running prove with algorithm: {}, field: {}, circuit: {}",
+                        algorithm_type, field_type, circuit_type
+                    );
+
+                    circuit_path = format!(
+                        "circuits/{}/{}/{}/circuit.txt",
+                        algorithm_type, field_type, circuit_type
+                    );
+                    private_path = format!(
+                        "circuits/{}/{}/{}/private.txt",
+                        algorithm_type, field_type, circuit_type
+                    );
+                    public_path = format!(
+                        "circuits/{}/{}/{}/public.txt",
+                        algorithm_type, field_type, circuit_type
+                    );
+                    output_prefix = format!("{}_{}_{}", algorithm_type, field_type, circuit_type);
+                }
+                "keccak_f" => {
+                    println!(
+                        "Running prove with algorithm: {}, field: {}",
+                        algorithm_type, field_type
+                    );
+                    circuit_path =
+                        format!("circuits/{}/{}/circuit.txt", algorithm_type, field_type);
+                    private_path =
+                        format!("circuits/{}/{}/private.txt", algorithm_type, field_type);
+                    public_path = format!("circuits/{}/{}/public.txt", algorithm_type, field_type);
+                    output_prefix = format!("{}_{}", algorithm_type, field_type);
+                }
+                _ => {
+                    return Err(eyre::eyre!("Unsupported algorithm: {}", algorithm_type));
+                }
+            }
 
             // Create output path
             let output_path = format!("results/proofs/{}.json", output_prefix);
 
             // Run proof with the selected circuit
-            let result =
-                prove::prove_with_paths(&circuit_path, &private_path, &public_path, &output_path)?;
+            let result = prove::prove(&circuit_path, &private_path, &public_path, &output_path)?;
 
             Ok(result)
         }
         None => {
             // Default behavior with improved help message
             println!(
-                "No command specified. Using default: 'prove' with f2 field and single circuit."
+                "No command specified. Using default: 'prove' with poseidon algorithm, f2 field and single circuit."
             );
             println!("Available options:");
-            println!("  --field: f2 (default: f2)");
-            println!("  --circuit: single or hash_chain (default: single)");
+            println!("  --algorithm: poseidon or keccak_f (default: poseidon)");
+            println!("  --field: f2 or f64 (default: f2)");
+            println!("  --circuit: single or hash_chain_10/100 (default: single, only applicable for poseidon)");
             println!("");
             println!("Examples:");
-            println!("  cargo run -- prove --field f2 --circuit hash_chain_10   # Run hash chain with F2 (only F2 is supported for hash chains)");
-            println!("  cargo run -- prove --field f2                        # Run single Poseidon with F2");
+            println!("  cargo run -- prove --algorithm poseidon --field f2 --circuit hash_chain_10   # Run Poseidon hash chain with F2");
+            println!("  cargo run -- prove --algorithm poseidon --field f64                          # Run single Poseidon with F64");
+            println!("  cargo run -- prove --algorithm keccak_f --field f2                           # Run Keccak-F with F2");
+            println!("  cargo run -- prove --algorithm keccak_f --field f64                          # Run Keccak-F with F64");
             println!("");
 
             // Same default as if called explicitly
+            let algorithm_type = "poseidon";
             let field_type = "f2";
             let circuit_type = "single";
 
             // Use the same path construction logic as in the explicit command
             let (circuit_path, private_path, public_path, output_prefix) = (
-                format!("circuits/poseidon/{}/single/poseidon.txt", field_type),
-                format!("circuits/poseidon/{}/single/poseidon_private.txt", field_type),
-                format!("circuits/poseidon/{}/single/poseidon_public.txt", field_type),
-                format!("single_{}", field_type),
+                format!("circuits/poseidon/{}/{}/circuit.txt", field_type, circuit_type),
+                format!("circuits/poseidon/{}/{}/private.txt", field_type, circuit_type),
+                format!("circuits/poseidon/{}/{}/public.txt", field_type, circuit_type),
+                format!("poseidon_{}_{}", field_type, circuit_type),
             );
 
-            let output_path = format!("results/proofs/proof_{}.json", output_prefix);
+            let output_path = format!("results/proofs/{}.json", output_prefix);
 
-            println!("Running prove with field: {}, circuit: {}", field_type, circuit_type);
-            let result =
-                prove::prove_with_paths(&circuit_path, &private_path, &public_path, &output_path)?;
+            println!(
+                "Running prove with algorithm: {}, field: {}, circuit: {}",
+                algorithm_type, field_type, circuit_type
+            );
+            let result = prove::prove(&circuit_path, &private_path, &public_path, &output_path)?;
             Ok(result)
         }
     }
