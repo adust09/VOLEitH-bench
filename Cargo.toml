@@ -23,9 +23,9 @@ sysinfo = "0.29.10"
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [[bench]]
-name = "poseidon_f2_benches"
+name = "poseidon"
 harness = false
 
 [[bench]]
-name = "keccak_f_benches"
+name = "keccak_f"
 harness = false

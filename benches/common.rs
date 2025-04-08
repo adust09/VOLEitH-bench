@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion, Throughput};
+use criterion::{Criterion, Throughput};
 use merlin::Transcript;
 use rand::thread_rng;
 use schmivitz::{insecure::InsecureVole, Proof};
@@ -8,19 +8,19 @@ use std::{fs, io::Cursor, path::Path, time::Instant};
 use sysinfo::{PidExt, ProcessExt, System, SystemExt};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct BenchmarkResult {
-    proof_generation_time_ms: u64,
-    proof_verification_time_ms: u64,
-    proof_size_bytes: usize,
-    communication_overhead_bytes: usize,
-    prover_cpu_usage: f32,
-    prover_memory_usage_mb: f64,
-    verifier_cpu_usage: f32,
-    verifier_memory_usage_mb: f64,
+pub struct BenchmarkResult {
+    pub proof_generation_time_ms: u64,
+    pub proof_verification_time_ms: u64,
+    pub proof_size_bytes: usize,
+    pub communication_overhead_bytes: usize,
+    pub prover_cpu_usage: f32,
+    pub prover_memory_usage_mb: f64,
+    pub verifier_cpu_usage: f32,
+    pub verifier_memory_usage_mb: f64,
 }
 
 /// Initialize system monitoring and get the initial CPU/memory values
-fn init_system_monitoring() -> System {
+pub fn init_system_monitoring() -> System {
     let mut system = System::new_all();
     system.refresh_all();
 
@@ -35,7 +35,7 @@ fn init_system_monitoring() -> System {
 
 /// Get process resource usage from a System instance
 /// Note: cpu_usage() already returns the delta since last refresh
-fn get_process_usage(system: &mut System) -> (f32, f64) {
+pub fn get_process_usage(system: &mut System) -> (f32, f64) {
     // Refresh to get current measurements
     system.refresh_all();
 
@@ -55,17 +55,13 @@ fn get_process_usage(system: &mut System) -> (f32, f64) {
     (0.0, 0.0)
 }
 
-/// Create a new benchmark transcript
-fn create_transcript() -> Transcript {
-    Transcript::new(b"bench poseidon transcript")
-}
-
 /// Run the proof generation and verification process with detailed measurements
 /// Performs 10 runs and averages the results
-fn run_proof(
+pub fn run_proof(
     circuit_path_str: &str,
     private_input_path_str: &str,
     public_input_path_str: &str,
+    create_transcript_fn: fn() -> Transcript,
 ) -> BenchmarkResult {
     // Number of runs to average
     const NUM_RUNS: u32 = 10;
@@ -100,7 +96,7 @@ fn run_proof(
     let mut prover_system = init_system_monitoring();
 
     let circuit_for_proof = &mut Cursor::new(circuit_bytes_slice);
-    let mut transcript_for_proof = create_transcript();
+    let mut transcript_for_proof = create_transcript_fn();
     let rng_for_proof = &mut thread_rng();
 
     let mut total_proving_time = Duration::ZERO;
@@ -119,7 +115,7 @@ fn run_proof(
     // Run additional (NUM_RUNS-1) iterations for a total of NUM_RUNS
     for i in 1..NUM_RUNS {
         let circuit_run = &mut Cursor::new(circuit_bytes_slice);
-        let mut transcript_run = create_transcript();
+        let mut transcript_run = create_transcript_fn();
         let rng_run = &mut thread_rng();
 
         let start = Instant::now();
@@ -167,7 +163,7 @@ fn run_proof(
     let mut total_verification_time = Duration::ZERO;
     for i in 0..NUM_RUNS {
         let circuit_verify = &mut Cursor::new(circuit_bytes_slice);
-        let mut verification_transcript = create_transcript();
+        let mut verification_transcript = create_transcript_fn();
 
         let start = Instant::now();
         let verification_result = proof.verify(circuit_verify, &mut verification_transcript);
@@ -198,12 +194,13 @@ fn run_proof(
     }
 }
 
-fn run_detailed_benchmark(
+pub fn run_detailed_benchmark(
     c: &mut Criterion,
     group_name: &str,
     circuit_path: &str,
     private_path: &str,
     public_path: &str,
+    create_transcript_fn: fn() -> Transcript,
 ) {
     assert!(Path::new(circuit_path).exists(), "Circuit file does not exist at {}", circuit_path);
     assert!(
@@ -225,7 +222,7 @@ fn run_detailed_benchmark(
 
     println!("Running detailed benchmark with 10 iterations...");
 
-    let benchmark_result = run_proof(circuit_path, private_path, public_path);
+    let benchmark_result = run_proof(circuit_path, private_path, public_path, create_transcript_fn);
 
     println!("Running Criterion measurements for proof generation...");
     group.bench_function("proof_generation_time", |b| {
@@ -237,7 +234,7 @@ fn run_detailed_benchmark(
                 let circuit_bytes = fs::read_to_string(circuit_path).unwrap();
                 let circuit_bytes_slice = circuit_bytes.as_bytes();
                 let circuit = &mut Cursor::new(circuit_bytes_slice);
-                let mut transcript_instance = create_transcript();
+                let mut transcript_instance = create_transcript_fn();
                 let rng = &mut thread_rng();
 
                 // Measure proof generation time
@@ -263,7 +260,7 @@ fn run_detailed_benchmark(
             let circuit_bytes = fs::read_to_string(circuit_path).unwrap();
             let circuit_bytes_slice = circuit_bytes.as_bytes();
             let circuit = &mut Cursor::new(circuit_bytes_slice);
-            let mut transcript_instance = create_transcript();
+            let mut transcript_instance = create_transcript_fn();
             let rng = &mut thread_rng();
 
             let proof = Proof::<InsecureVole>::prove::<_, _>(
@@ -279,7 +276,7 @@ fn run_detailed_benchmark(
             for _ in 0..iters {
                 // Reset circuit cursor for verification
                 let circuit = &mut Cursor::new(circuit_bytes_slice);
-                let mut verification_transcript = create_transcript();
+                let mut verification_transcript = create_transcript_fn();
 
                 // Measure verification time
                 let start = Instant::now();
@@ -322,22 +319,3 @@ fn run_detailed_benchmark(
 
     group.finish();
 }
-
-fn bench_f2_single(c: &mut Criterion) {
-    let circuit_path = "circuits/poseidon/f2/single/circuit.txt";
-    let private_path = "circuits/poseidon/f2/single/private.txt";
-    let public_path = "circuits/poseidon/f2/single/public.txt";
-
-    run_detailed_benchmark(c, "F2_Single_Hash", circuit_path, private_path, public_path);
-}
-
-fn bench_f2_hash_chain_10(c: &mut Criterion) {
-    let circuit_path = "circuits/poseidon/f2/hash_chain_10/circuit.txt";
-    let private_path = "circuits/poseidon/f2/hash_chain_10/private.txt";
-    let public_path = "circuits/poseidon/f2/hash_chain_10/public.txt";
-
-    run_detailed_benchmark(c, "F2_Hash_Chain_10", circuit_path, private_path, public_path);
-}
-
-criterion_group!(benches, bench_f2_single, bench_f2_hash_chain_10);
-criterion_main!(benches);
