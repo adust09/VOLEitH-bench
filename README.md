@@ -44,3 +44,5 @@ You can run the benchmarks yourself using the following scripts:
 ```bash
 cargo bench --bench {benchmark_name}
 ```
+sha256 and keccak_f are the circuits implemented at Bristol Fashion transpiled to SIEVE IR and compiled by Schmivitz.**If** you want to benchmark the circuits implemented in Bristol Fashion, please use [this repository](https://github.com/adust09/swanky/tree/dev/bristol2sieve) as a reference for your transpile.
+Currently we are copying the generated circuits to this project.Private Input and Public Input files are not generated, so prepare them yourself.
