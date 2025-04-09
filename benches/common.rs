@@ -7,8 +7,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Duration;
-use std::{fs, io::Cursor, path::Path, time::Instant};
+use std::{
+    fs,
+    io::{BufReader, Cursor},
+    path::Path,
+    time::Instant,
+};
 use sysinfo::{PidExt, ProcessExt, System, SystemExt};
+
+// Constants for buffer sizes
+const INITIAL_BUFFER_CAPACITY: usize = 1024 * 1024; // 1MB initial capacity for buffers
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkResult {
@@ -37,6 +45,13 @@ impl Default for MonitoringConfig {
             stabilization_delay_ms: 100, // Reduced from 200ms
         }
     }
+}
+
+// Pre-allocate a buffer with capacity for reuse
+fn create_buffer_with_capacity(data: &[u8]) -> Vec<u8> {
+    let mut buffer = Vec::with_capacity(INITIAL_BUFFER_CAPACITY.max(data.len()));
+    buffer.extend_from_slice(data);
+    buffer
 }
 
 // Global cache for file contents to avoid repeated file I/O
@@ -168,8 +183,9 @@ pub fn run_proof(
     // ----- PROVER MEASUREMENTS -----
     // Initialize system monitoring for prover measurements
     let mut prover_system = init_system_monitoring(&config);
-
-    let circuit_for_proof = &mut Cursor::new(circuit_bytes_slice);
+    // Create a buffer with pre-allocated capacity
+    let circuit_buffer = create_buffer_with_capacity(circuit_bytes_slice);
+    let mut circuit_for_proof = Cursor::new(circuit_buffer);
     let mut transcript_for_proof = create_transcript_fn();
     let rng_for_proof = &mut thread_rng();
 
@@ -178,23 +194,32 @@ pub fn run_proof(
     // Generate the first proof and measure its time
     let start_main = Instant::now();
     let proof = Proof::<InsecureVole>::prove::<_, _>(
-        circuit_for_proof,
+        &mut circuit_for_proof,
         private_input_path,
         &mut transcript_for_proof,
         rng_for_proof,
     )
     .expect("Failed to generate main proof");
     total_proving_time += start_main.elapsed();
+    // return_cursor_to_pool(circuit_for_proof);
+
+    // Pre-allocate a vector for storing RNGs to minimize allocations
+    let mut rngs = Vec::with_capacity(NUM_RUNS as usize);
+    for _ in 0..NUM_RUNS {
+        rngs.push(thread_rng());
+    }
 
     // Run additional (NUM_RUNS-1) iterations for a total of NUM_RUNS
     for i in 1..NUM_RUNS {
-        let circuit_run = &mut Cursor::new(circuit_bytes_slice);
+        // Reuse the buffer by creating a new cursor with the same data
+        let circuit_buffer = create_buffer_with_capacity(circuit_bytes_slice);
+        let mut circuit_run = Cursor::new(circuit_buffer);
         let mut transcript_run = create_transcript_fn();
-        let rng_run = &mut thread_rng();
+        let rng_run = &mut rngs[i as usize];
 
         let start = Instant::now();
         let _ = Proof::<InsecureVole>::prove::<_, _>(
-            circuit_run,
+            &mut circuit_run,
             private_input_path,
             &mut transcript_run,
             rng_run,
@@ -216,8 +241,8 @@ pub fn run_proof(
     println!("Proof size: {} bytes", proof_size_bytes);
     // Calculate communication overhead (proof size plus public inputs and protocol overhead)
     // Read public input file to calculate its size for communication overhead
+    // Read public input file once and reuse the content
     let public_input_content = read_file_cached(public_input_path).unwrap_or_else(|_| Vec::new());
-    let public_input_size = public_input_content.len();
     let public_input_size = public_input_content.len();
 
     // Communication overhead includes the proof size and the public inputs
@@ -236,12 +261,20 @@ pub fn run_proof(
 
     // Measure verification time with NUM_RUNS iterations
     let mut total_verification_time = Duration::ZERO;
+    // Pre-allocate transcripts for verification
+    let mut verification_transcripts = Vec::with_capacity(NUM_RUNS as usize);
+    for _ in 0..NUM_RUNS {
+        verification_transcripts.push(create_transcript_fn());
+    }
+
     for i in 0..NUM_RUNS {
-        let circuit_verify = &mut Cursor::new(circuit_bytes_slice);
-        let mut verification_transcript = create_transcript_fn();
+        // Create a new cursor for each verification
+        let circuit_buffer = create_buffer_with_capacity(circuit_bytes_slice);
+        let mut circuit_verify = Cursor::new(circuit_buffer);
+        let verification_transcript = &mut verification_transcripts[i as usize];
 
         let start = Instant::now();
-        let verification_result = proof.verify(circuit_verify, &mut verification_transcript);
+        let verification_result = proof.verify(&mut circuit_verify, verification_transcript);
         total_verification_time += start.elapsed();
 
         assert!(
@@ -315,14 +348,17 @@ pub fn run_detailed_benchmark(
                 let circuit_bytes = read_file_cached(Path::new(circuit_path))
                     .unwrap_or_else(|_| panic!("Failed to read circuit file at {}", circuit_path));
                 let circuit_bytes_slice = circuit_bytes.as_slice();
-                let circuit = &mut Cursor::new(circuit_bytes_slice);
+
+                // Create a buffer with pre-allocated capacity
+                let circuit_buffer = create_buffer_with_capacity(circuit_bytes_slice);
+                let mut circuit = Cursor::new(circuit_buffer);
                 let mut transcript_instance = create_transcript_fn();
                 let rng = &mut thread_rng();
 
                 // Measure proof generation time
                 let start = Instant::now();
                 let _proof = Proof::<InsecureVole>::prove::<_, _>(
-                    circuit,
+                    &mut circuit,
                     Path::new(private_path),
                     &mut transcript_instance,
                     rng,
@@ -342,12 +378,15 @@ pub fn run_detailed_benchmark(
             let circuit_bytes = read_file_cached(Path::new(circuit_path))
                 .unwrap_or_else(|_| panic!("Failed to read circuit file at {}", circuit_path));
             let circuit_bytes_slice = circuit_bytes.as_slice();
-            let circuit = &mut Cursor::new(circuit_bytes_slice);
+
+            // Create a buffer with pre-allocated capacity
+            let circuit_buffer = create_buffer_with_capacity(circuit_bytes_slice);
+            let mut circuit = Cursor::new(circuit_buffer);
             let mut transcript_instance = create_transcript_fn();
             let rng = &mut thread_rng();
 
             let proof = Proof::<InsecureVole>::prove::<_, _>(
-                circuit,
+                &mut circuit,
                 Path::new(private_path),
                 &mut transcript_instance,
                 rng,
@@ -356,14 +395,21 @@ pub fn run_detailed_benchmark(
 
             let mut total_time = Duration::ZERO;
 
+            // Pre-allocate verification transcripts
+            let mut verification_transcripts = Vec::with_capacity(iters as usize);
             for _ in 0..iters {
-                // Reset circuit cursor for verification
-                let circuit = &mut Cursor::new(circuit_bytes_slice);
-                let mut verification_transcript = create_transcript_fn();
+                verification_transcripts.push(create_transcript_fn());
+            }
+
+            for i in 0..iters {
+                // Create a new cursor for each verification
+                let circuit_buffer = create_buffer_with_capacity(circuit_bytes_slice);
+                let mut circuit = Cursor::new(circuit_buffer);
+                let verification_transcript = &mut verification_transcripts[i as usize];
 
                 // Measure verification time
                 let start = Instant::now();
-                let _ = proof.verify(circuit, &mut verification_transcript);
+                let _ = proof.verify(&mut circuit, verification_transcript);
                 total_time += start.elapsed();
             }
 
