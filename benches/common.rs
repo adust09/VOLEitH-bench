@@ -1,8 +1,11 @@
 use criterion::{Criterion, Throughput};
 use merlin::Transcript;
+use once_cell::sync::Lazy;
 use rand::thread_rng;
 use schmivitz::{insecure::InsecureVole, Proof};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Mutex;
 use std::time::Duration;
 use std::{fs, io::Cursor, path::Path, time::Instant};
 use sysinfo::{PidExt, ProcessExt, System, SystemExt};
@@ -19,31 +22,97 @@ pub struct BenchmarkResult {
     pub verifier_memory_usage_mb: f64,
 }
 
-/// Initialize system monitoring and get the initial CPU/memory values
-pub fn init_system_monitoring() -> System {
-    let mut system = System::new_all();
-    system.refresh_all();
+#[derive(Debug, Clone, Copy)]
+pub struct MonitoringConfig {
+    pub enabled: bool,
+    pub refresh_interval_ms: u64,
+    pub stabilization_delay_ms: u64,
+}
 
-    // Sleep to allow initial measurements to settle
-    std::thread::sleep(std::time::Duration::from_millis(100));
+impl Default for MonitoringConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            refresh_interval_ms: 50,     // Reduced from 100ms
+            stabilization_delay_ms: 100, // Reduced from 200ms
+        }
+    }
+}
+
+// Global cache for file contents to avoid repeated file I/O
+static FILE_CACHE: Lazy<Mutex<HashMap<String, Vec<u8>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+
+/// Read file contents efficiently, using cache when possible
+/// Returns file content as bytes
+pub fn read_file_cached(path: &Path) -> Result<Vec<u8>, std::io::Error> {
+    let path_str = path.to_string_lossy().to_string();
+
+    // Try to get from cache first
+    {
+        let cache = FILE_CACHE.lock().unwrap();
+        if let Some(content) = cache.get(&path_str) {
+            return Ok(content.clone());
+        }
+    }
+
+    // Not in cache, read from disk
+    let content = fs::read(path)?;
+
+    // Store in cache for future use
+    {
+        let mut cache = FILE_CACHE.lock().unwrap();
+        cache.insert(path_str, content.clone());
+    }
+
+    Ok(content)
+}
+
+/// Initialize system monitoring and get the initial CPU/memory values
+pub fn init_system_monitoring(config: &MonitoringConfig) -> Option<System> {
+    if !config.enabled {
+        return None;
+    }
+
+    let mut system = System::new_all();
+
+    // Only refresh specific components we need instead of all
+    system.refresh_processes();
+    system.refresh_memory();
+    system.refresh_cpu();
+
+    // Sleep to allow initial measurements to settle (configurable)
+    if config.stabilization_delay_ms > 0 {
+        std::thread::sleep(std::time::Duration::from_millis(config.stabilization_delay_ms));
+    }
 
     // Must refresh again to establish the baseline for CPU measurements
-    system.refresh_all();
+    system.refresh_processes();
+    system.refresh_cpu();
 
-    system
+    Some(system)
 }
 
 /// Get process resource usage from a System instance
 /// Note: cpu_usage() already returns the delta since last refresh
-pub fn get_process_usage(system: &mut System) -> (f32, f64) {
-    // Refresh to get current measurements
-    system.refresh_all();
+pub fn get_process_usage(system_opt: &mut Option<System>, config: &MonitoringConfig) -> (f32, f64) {
+    // If monitoring is disabled, return zeros
+    let Some(system) = system_opt else {
+        return (0.0, 0.0);
+    };
 
-    // Sleep briefly to allow CPU measurement to register
-    std::thread::sleep(std::time::Duration::from_millis(100));
+    // Refresh only the specific components we need
+    system.refresh_processes();
+    system.refresh_memory();
+    system.refresh_cpu();
+
+    // Sleep briefly to allow CPU measurement to register (configurable)
+    if config.refresh_interval_ms > 0 {
+        std::thread::sleep(std::time::Duration::from_millis(config.refresh_interval_ms));
+    }
 
     // Refresh again to get measurements that account for the time passed
-    system.refresh_all();
+    system.refresh_processes();
+    system.refresh_cpu();
 
     let pid = std::process::id();
     if let Some(process) = system.process(sysinfo::Pid::from_u32(pid)) {
@@ -62,15 +131,18 @@ pub fn run_proof(
     private_input_path_str: &str,
     public_input_path_str: &str,
     create_transcript_fn: fn() -> Transcript,
+    monitoring_config: Option<MonitoringConfig>,
 ) -> BenchmarkResult {
+    // Use provided monitoring config or default
+    let config = monitoring_config.unwrap_or_default();
     // Number of runs to average
     const NUM_RUNS: u32 = 10;
 
-    // Read circuit and input files
+    // Read circuit and input files efficiently
     let circuit_path = Path::new(circuit_path_str);
-    let circuit_bytes = fs::read_to_string(circuit_path)
+    let circuit_bytes = read_file_cached(circuit_path)
         .unwrap_or_else(|_| panic!("Failed to read circuit file at {:?}", circuit_path));
-    let circuit_bytes_slice = circuit_bytes.as_bytes();
+    let circuit_bytes_slice = circuit_bytes.as_slice();
 
     let private_input_path = Path::new(private_input_path_str);
     assert!(
@@ -89,11 +161,13 @@ pub fn run_proof(
     println!("Running {} iterations for accurate measurements...", NUM_RUNS);
 
     // System stabilization before measuring
-    std::thread::sleep(std::time::Duration::from_millis(200));
+    if config.stabilization_delay_ms > 0 {
+        std::thread::sleep(std::time::Duration::from_millis(config.stabilization_delay_ms));
+    }
 
     // ----- PROVER MEASUREMENTS -----
     // Initialize system monitoring for prover measurements
-    let mut prover_system = init_system_monitoring();
+    let mut prover_system = init_system_monitoring(&config);
 
     let circuit_for_proof = &mut Cursor::new(circuit_bytes_slice);
     let mut transcript_for_proof = create_transcript_fn();
@@ -133,18 +207,17 @@ pub fn run_proof(
     let prove_duration = total_proving_time / NUM_RUNS;
     println!("Average proving time ({} runs): {:?}", NUM_RUNS, prove_duration);
 
-    let (prover_cpu_usage, prover_mem_usage) = get_process_usage(&mut prover_system);
+    let (prover_cpu_usage, prover_mem_usage) = get_process_usage(&mut prover_system, &config);
     println!("Prover CPU Usage: {:.2}%", prover_cpu_usage);
 
     // Calculate proof size in bytes
     let proof_string = format!("{:?}", proof);
     let proof_size_bytes = proof_string.len();
     println!("Proof size: {} bytes", proof_size_bytes);
-
     // Calculate communication overhead (proof size plus public inputs and protocol overhead)
     // Read public input file to calculate its size for communication overhead
-    let public_input_content =
-        fs::read_to_string(public_input_path).unwrap_or_else(|_| "".to_string());
+    let public_input_content = read_file_cached(public_input_path).unwrap_or_else(|_| Vec::new());
+    let public_input_size = public_input_content.len();
     let public_input_size = public_input_content.len();
 
     // Communication overhead includes the proof size and the public inputs
@@ -153,11 +226,13 @@ pub fn run_proof(
     println!("Communication overhead: {} bytes", communication_overhead_bytes);
 
     // Allow system to stabilize before verification
-    std::thread::sleep(std::time::Duration::from_millis(200));
+    if config.stabilization_delay_ms > 0 {
+        std::thread::sleep(std::time::Duration::from_millis(config.stabilization_delay_ms));
+    }
 
     // ----- VERIFIER MEASUREMENTS -----
     // Initialize system monitoring for verifier measurements
-    let mut verifier_system = init_system_monitoring();
+    let mut verifier_system = init_system_monitoring(&config);
 
     // Measure verification time with NUM_RUNS iterations
     let mut total_verification_time = Duration::ZERO;
@@ -179,7 +254,7 @@ pub fn run_proof(
     let verify_duration = total_verification_time / NUM_RUNS;
     println!("Average verification time ({} runs): {:?}", NUM_RUNS, verify_duration);
 
-    let (verifier_cpu_usage, verifier_mem_usage) = get_process_usage(&mut verifier_system);
+    let (verifier_cpu_usage, verifier_mem_usage) = get_process_usage(&mut verifier_system, &config);
     println!("Verifier CPU Usage: {:.2}%", verifier_cpu_usage);
 
     BenchmarkResult {
@@ -201,6 +276,7 @@ pub fn run_detailed_benchmark(
     private_path: &str,
     public_path: &str,
     create_transcript_fn: fn() -> Transcript,
+    monitoring_config: Option<MonitoringConfig>,
 ) {
     assert!(Path::new(circuit_path).exists(), "Circuit file does not exist at {}", circuit_path);
     assert!(
@@ -213,7 +289,9 @@ pub fn run_detailed_benchmark(
     println!("\n====== {} BENCHMARK START ======", group_name);
 
     // Get circuit size as parameter for throughput measurements
-    let circuit_size = fs::read_to_string(circuit_path).unwrap().len();
+    let circuit_bytes = read_file_cached(Path::new(circuit_path))
+        .unwrap_or_else(|_| panic!("Failed to read circuit file at {}", circuit_path));
+    let circuit_size = circuit_bytes.len();
     println!("Circuit size: {} bytes", circuit_size);
 
     let mut group = c.benchmark_group(group_name);
@@ -222,7 +300,10 @@ pub fn run_detailed_benchmark(
 
     println!("Running detailed benchmark with 10 iterations...");
 
-    let benchmark_result = run_proof(circuit_path, private_path, public_path, create_transcript_fn);
+    // Use provided monitoring config or default
+    let config = monitoring_config.unwrap_or_default();
+    let benchmark_result =
+        run_proof(circuit_path, private_path, public_path, create_transcript_fn, Some(config));
 
     println!("Running Criterion measurements for proof generation...");
     group.bench_function("proof_generation_time", |b| {
@@ -230,9 +311,10 @@ pub fn run_detailed_benchmark(
             let mut total_time = Duration::ZERO;
 
             for _ in 0..iters {
-                // Set up for proof generation
-                let circuit_bytes = fs::read_to_string(circuit_path).unwrap();
-                let circuit_bytes_slice = circuit_bytes.as_bytes();
+                // Set up for proof generation - reuse cached circuit data
+                let circuit_bytes = read_file_cached(Path::new(circuit_path))
+                    .unwrap_or_else(|_| panic!("Failed to read circuit file at {}", circuit_path));
+                let circuit_bytes_slice = circuit_bytes.as_slice();
                 let circuit = &mut Cursor::new(circuit_bytes_slice);
                 let mut transcript_instance = create_transcript_fn();
                 let rng = &mut thread_rng();
@@ -256,9 +338,10 @@ pub fn run_detailed_benchmark(
     println!("Running Criterion measurements for verification...");
     group.bench_function("proof_verification_time", |b| {
         b.iter_custom(|iters| {
-            // Generate the proof once outside the timing loop
-            let circuit_bytes = fs::read_to_string(circuit_path).unwrap();
-            let circuit_bytes_slice = circuit_bytes.as_bytes();
+            // Generate the proof once outside the timing loop - reuse cached circuit data
+            let circuit_bytes = read_file_cached(Path::new(circuit_path))
+                .unwrap_or_else(|_| panic!("Failed to read circuit file at {}", circuit_path));
+            let circuit_bytes_slice = circuit_bytes.as_slice();
             let circuit = &mut Cursor::new(circuit_bytes_slice);
             let mut transcript_instance = create_transcript_fn();
             let rng = &mut thread_rng();

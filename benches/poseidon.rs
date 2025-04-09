@@ -3,7 +3,7 @@ use merlin::Transcript;
 use std::path::Path;
 
 mod common;
-use common::run_detailed_benchmark;
+use common::{run_detailed_benchmark, MonitoringConfig};
 
 /// Create a transcript for poseidon benchmarks
 fn create_transcript() -> Transcript {
@@ -15,6 +15,10 @@ fn bench_f2_single(c: &mut Criterion) {
     let private_path = "circuits/poseidon/f2/single/private.txt";
     let public_path = "circuits/poseidon/f2/single/public.txt";
 
+    // Create a monitoring config with reduced overhead
+    let monitoring_config =
+        MonitoringConfig { enabled: true, refresh_interval_ms: 50, stabilization_delay_ms: 100 };
+
     run_detailed_benchmark(
         c,
         "F2_Single_Hash",
@@ -22,6 +26,7 @@ fn bench_f2_single(c: &mut Criterion) {
         private_path,
         public_path,
         create_transcript,
+        Some(monitoring_config),
     );
 }
 
@@ -30,6 +35,10 @@ fn bench_f2_hash_chain_10(c: &mut Criterion) {
     let private_path = "circuits/poseidon/f2/hash_chain_10/private.txt";
     let public_path = "circuits/poseidon/f2/hash_chain_10/public.txt";
 
+    // Reuse the same monitoring config
+    let monitoring_config =
+        MonitoringConfig { enabled: true, refresh_interval_ms: 50, stabilization_delay_ms: 100 };
+
     run_detailed_benchmark(
         c,
         "F2_Hash_Chain_10",
@@ -37,6 +46,7 @@ fn bench_f2_hash_chain_10(c: &mut Criterion) {
         private_path,
         public_path,
         create_transcript,
+        Some(monitoring_config),
     );
 }
 
@@ -49,6 +59,13 @@ fn bench_f2_hash_chain_100(c: &mut Criterion) {
         && Path::new(private_path).exists()
         && Path::new(public_path).exists()
     {
+        // Reuse the same monitoring config
+        let monitoring_config = MonitoringConfig {
+            enabled: true,
+            refresh_interval_ms: 50,
+            stabilization_delay_ms: 100,
+        };
+
         run_detailed_benchmark(
             c,
             "F2_Hash_Chain_100",
@@ -56,6 +73,7 @@ fn bench_f2_hash_chain_100(c: &mut Criterion) {
             private_path,
             public_path,
             create_transcript,
+            Some(monitoring_config),
         );
     }
 }
