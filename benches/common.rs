@@ -7,12 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Duration;
-use std::{
-    fs,
-    io::{BufReader, Cursor},
-    path::Path,
-    time::Instant,
-};
+use std::{fs, io::Cursor, path::Path, time::Instant};
 use sysinfo::{PidExt, ProcessExt, System, SystemExt};
 
 // Constants for buffer sizes
@@ -419,7 +414,6 @@ pub fn run_detailed_benchmark(
 
     // --- Report comprehensive metrics ---
     println!("\n====== {} BENCHMARK RESULTS ======", group_name);
-    println!("--- Performance Metrics (10-run average) ---");
     println!(
         "Proof Generation Time: {:?} ({} ms)",
         Duration::from_millis(benchmark_result.proof_generation_time_ms),
@@ -430,13 +424,9 @@ pub fn run_detailed_benchmark(
         Duration::from_millis(benchmark_result.proof_verification_time_ms),
         benchmark_result.proof_verification_time_ms
     );
-
-    println!("\n--- Size Metrics ---");
     println!("Proof Size: {} bytes", benchmark_result.proof_size_bytes);
     println!("Communication Overhead: {} bytes", benchmark_result.communication_overhead_bytes);
     println!("Circuit Size: {} bytes", circuit_size);
-
-    println!("\n--- Resource Usage Metrics ---");
     println!("Prover Computation Load:");
     println!("  - CPU Usage: {:.2}%", benchmark_result.prover_cpu_usage);
     println!("  - Memory Usage: {:.2} MB", benchmark_result.prover_memory_usage_mb);

@@ -25,23 +25,22 @@ The following two methods are used for onchain-verification.
 
 ## Benchmark
 
-The following benchmark results were obtained on a test machine using the VOLEitH implementation with `Poseidon hash`.
+The following benchmark results were obtained on a test machine using the VOLEitH implementation.
 
 - Apple M1 with 16GB memory
 - [VOLE itH Parameters](https://github.com/adust09/swanky/blob/dev/schmivitz/src/parameters.rs)
-- F_2 Single Hash and F_2 Hash Chain (10 iterations) values are both the average of 10 runs
 
-| Metric                   | F_2 Single Hash     | F_2 Hash Chain (10 iterations) |sha256|
-|--------------------------|---------------|--------------------------------|---------------|
-| Proof Generation Time    | 537.012µs     | 1.699533ms                      |99ms|
-| Proof Verification Time  | 214.07µs     | 1.061466ms                      |51ms|
-| Proof Size               | 24,312 bytes  | 58,618 bytes                   |4,927,655 bytes|
-| Prover Computation Load  | 0.10% CPU, 11.66 MB | 0.19% CPU, 15.28 MB        |4,927,720 bytes|
-| Verifier Computation Load| 0.12% CPU, 13.97 MB | 0.13% CPU, 16.89 MB        |0.12% CPU, 99.44 MB|
-| Communication Overhead   | 24,377 bytes  | 58,738 bytes                   |0.14% CPU, 99.33 MB|
+| Metric                   | sha256        | keccak_f      |
+|--------------------------|---------------|---------------|
+| Proof Generation Time    | 99 ms         | 182 ms        |
+| Proof Verification Time  | 51 ms         | 77 ms         |
+| Proof Size               | 4.927655 MB   | 8.416492 MB   |
+| Communication Overhead   | 4.927720 MB   | 8.416557 MB   |
+| Prover Computation Load  | 0.12% CPU, 99.44 MB | 0.03% CPU, 147 MB |
+| Verifier Computation Load| 0.14% CPU, 99.33 MB | 0.03% CPU, 151.34 MB |
 
 You can run the benchmarks yourself using the following scripts:
 
 ```bash
-cargo bench
+cargo bench --bench {benchmark_name}
 ```
