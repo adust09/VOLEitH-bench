@@ -8,7 +8,7 @@ debug = true
 lto = true
 
 [dependencies]
-schmivitz = { git = "https://github.com/adust09/swanky", rev="5e770e1a68db2c9a11f8a79c5ff5523a6b489ef8"}
+schmivitz = { git = "https://github.com/adust09/swanky", rev="10ce3701dd29fca3fd0ada733fe9dbf9cdbf92c9"}
 
 eyre = "0.6.12"
 rand = "0.8.5"
@@ -28,4 +28,8 @@ harness = false
 
 [[bench]]
 name = "keccak_f"
+harness = false
+
+[[bench]]
+name = "sha256"
 harness = false
