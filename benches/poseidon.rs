@@ -7,10 +7,10 @@ use common::{run_detailed_benchmark, MonitoringConfig};
 
 /// Create a transcript for poseidon benchmarks
 fn create_transcript() -> Transcript {
-    Transcript::new(b"bench poseidon transcript")
+    Transcript::new(b"poseidon transcript")
 }
 
-fn bench_f2_single(c: &mut Criterion) {
+fn poseidon_f2_single(c: &mut Criterion) {
     let circuit_path = "circuits/poseidon/f2/single/circuit.txt";
     let private_path = "circuits/poseidon/f2/single/private.txt";
     let public_path = "circuits/poseidon/f2/single/public.txt";
@@ -20,7 +20,7 @@ fn bench_f2_single(c: &mut Criterion) {
 
     run_detailed_benchmark(
         c,
-        "F2_Single_Hash",
+        "poseidon_f2_single",
         circuit_path,
         private_path,
         public_path,
@@ -29,7 +29,7 @@ fn bench_f2_single(c: &mut Criterion) {
     );
 }
 
-fn bench_f2_hash_chain_10(c: &mut Criterion) {
+fn poseidon_f2_hash_chain_10(c: &mut Criterion) {
     let circuit_path = "circuits/poseidon/f2/hash_chain_10/circuit.txt";
     let private_path = "circuits/poseidon/f2/hash_chain_10/private.txt";
     let public_path = "circuits/poseidon/f2/hash_chain_10/public.txt";
@@ -39,7 +39,7 @@ fn bench_f2_hash_chain_10(c: &mut Criterion) {
 
     run_detailed_benchmark(
         c,
-        "F2_Hash_Chain_10",
+        "poseidon_f2_hash_chain_10",
         circuit_path,
         private_path,
         public_path,
@@ -65,15 +65,17 @@ fn bench_f2_hash_chain_100(c: &mut Criterion) {
 
         run_detailed_benchmark(
             c,
-            "F2_Hash_Chain_100",
+            "poseidon_f2_hash_chain_100",
             circuit_path,
             private_path,
             public_path,
             create_transcript,
             Some(monitoring_config),
         );
+    } else {
+        println!("One or more files do not exist.");
     }
 }
 
-criterion_group!(benches, bench_f2_single, bench_f2_hash_chain_10, bench_f2_hash_chain_100);
+criterion_group!(benches, poseidon_f2_single, poseidon_f2_hash_chain_10, bench_f2_hash_chain_100);
 criterion_main!(benches);
