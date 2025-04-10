@@ -34,7 +34,7 @@ The following benchmark results were obtained on a test machine using the VOLEit
 |--------------------------|---------------|---------------|
 | Proof Generation Time    | 95 ms         | 143 ms        |
 | Proof Verification Time  | 51 ms         | 74 ms         |
-| Proof Size               | 4,927,342 B   | 8,416,569 MB   |
+| Proof Size               | 4,927,342 B   | 8,416,569 B   |
 | Communication Overhead   | 4,927,407 B   | 8,416,634 B   |
 | Prover Computation Load  | 0.02% CPU, 118.23 MB | 0.04% CPU, 154.14 MB |
 | Verifier Computation Load| 0.04% CPU, 138.89 MB | 0.04% CPU, 158.1 MB |
