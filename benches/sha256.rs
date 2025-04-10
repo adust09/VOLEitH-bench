@@ -9,9 +9,9 @@ fn create_transcript() -> Transcript {
 }
 
 fn sha256_f_benchmark(c: &mut Criterion) {
-    let f2_circuit_path = "circuits/sha256/f2/circuit.txt";
-    let f2_private_path = "circuits/sha256/f2/private.txt";
-    let f2_public_path = "circuits/sha256/f2/public.txt";
+    let f2_circuit_path = "circuits/sha256/f2/single/circuit.txt";
+    let f2_private_path = "circuits/sha256/f2/single/private.txt";
+    let f2_public_path = "circuits/sha256/f2/single/public.txt";
 
     let monitoring_config =
         MonitoringConfig { enabled: true, refresh_interval_ms: 50, stabilization_delay_ms: 100 };
