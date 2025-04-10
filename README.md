@@ -32,12 +32,14 @@ The following benchmark results were obtained on a test machine using the VOLEit
 
 | Metric                   | sha256        | keccak_f      |
 |--------------------------|---------------|---------------|
-| Proof Generation Time    | 99 ms         | 182 ms        |
-| Proof Verification Time  | 51 ms         | 77 ms         |
-| Proof Size               | 4.927655 MB   | 8.416492 MB   |
-| Communication Overhead   | 4.927720 MB   | 8.416557 MB   |
-| Prover Computation Load  | 0.12% CPU, 99.44 MB | 0.03% CPU, 147 MB |
-| Verifier Computation Load| 0.14% CPU, 99.33 MB | 0.03% CPU, 151.34 MB |
+| Proof Generation Time    | 95 ms         | 143 ms        |
+| Proof Verification Time  | 51 ms         | 74 ms         |
+| Proof Size               | 4,927,342 B   | 8,416,569 MB   |
+| Communication Overhead   | 4,927,407 B   | 8,416,634 B   |
+| Prover Computation Load  | 0.02% CPU, 118.23 MB | 0.04% CPU, 154.14 MB |
+| Verifier Computation Load| 0.04% CPU, 138.89 MB | 0.04% CPU, 158.1 MB |
+
+> Compared to the results of the [sha256 Circom implementation](https://eprint.iacr.org/2023/681.pdf), the Proof time performance is 15.5 times better. However, the Proof size is more than 6000 times larger.
 
 You can run the benchmarks yourself using the following scripts:
 
