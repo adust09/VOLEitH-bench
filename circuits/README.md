@@ -1,8 +1,6 @@
-# Poseidon Hash Function Implementation
-
-This directory contains implementations of the Poseidon hash function for different field sizes.
-
 ## Directory Structure
+
+This directory contains implementations of the some functions
 
 - `f2/`: Implementation for the binary field F_2
   - `circuit.txt`: Circuit definition for F_2
