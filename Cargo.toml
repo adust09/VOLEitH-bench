@@ -8,8 +8,8 @@ debug = true
 lto = true
 
 [dependencies]
-schmivitz = { git = "https://github.com/adust09/swanky", rev="fa3dce758681239dc9dba00492b3b4f288794228"}
-schmivitz-snark = { git = "https://github.com/adust09/swanky", rev="fa3dce758681239dc9dba00492b3b4f288794228"}
+schmivitz = { git = "https://github.com/adust09/swanky", rev="58fe779e794613dbacce277597a5b69ca83b15fc"}
+schmivitz-snark = { git = "https://github.com/adust09/swanky", rev="58fe779e794613dbacce277597a5b69ca83b15fc"}
 
 eyre = "0.6.12"
 rand = "0.8.5"
@@ -21,7 +21,17 @@ clap = { version = "4.4", features = ["derive"] }
 sysinfo = "0.29.10"
 once_cell = "1.18.0"
 num_cpus = "1.16.0"
-
+# rk
+ark-std = "0.3.0"
+ark-r1cs-std = "0.3.0"
+ark-relations = "0.3.0"
+ark-groth16 = "0.3.0"
+ark-bn254 = "0.3.0"
+ark-snark = "0.3.0"
+arkworks-solidity-verifier = "0.1.0"
+tracing = { version = "0.1", default-features = false, features = [ "attributes" ] }
+tracing-subscriber = { version = "0.2" }
+tempfile = "3.3.0"
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 
