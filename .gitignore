@@ -33,3 +33,5 @@ memory-bank/
 results/
 benchmark_results/
 benchmark_results_chain/
+foundry/cache
+foundry/out
