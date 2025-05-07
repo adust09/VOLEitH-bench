@@ -10,33 +10,33 @@ fn create_transcript() -> Transcript {
     Transcript::new(b"sha256 transcript")
 }
 
-fn sha256_single(c: &mut Criterion) {
-    let circuit_path = "circuits/sha256/single/circuit.txt";
-    let private_path = "circuits/sha256/single/private.txt";
-    let public_path = "circuits/sha256/single/public.txt";
+fn sha256_f2_single(c: &mut Criterion) {
+    let circuit_path = "circuits/sha256/circuit.txt";
+    let private_input_path = "circuits/sha256/private.txt";
+    let public_input_path = "circuits/sha256/public.txt";
 
     let monitoring_config =
         MonitoringConfig { enabled: true, refresh_interval_ms: 50, stabilization_delay_ms: 100 };
 
     run_detailed_benchmark(
         c,
-        "sha256_single",
+        "sha256_f2_single",
         circuit_path,
-        private_path,
-        public_path,
+        private_input_path,
+        public_input_path,
         create_transcript,
         Some(monitoring_config),
     );
 }
 
-fn sha256_hash_chain_10(c: &mut Criterion) {
-    let circuit_path = "circuits/sha256/hashchain/circuit.txt";
-    let private_path = "circuits/sha256/hashchain/private.txt";
-    let public_path = "circuits/sha256/hashchain/public.txt";
+fn sha256_f2_hash_chain_10(c: &mut Criterion) {
+    let circuit_path = "circuits/sha256/circuit.txt";
+    let private_input_path = "circuits/sha256/private.txt";
+    let public_input_path = "circuits/sha256/public.txt";
 
     if Path::new(circuit_path).exists()
-        && Path::new(private_path).exists()
-        && Path::new(public_path).exists()
+        && Path::new(private_input_path).exists()
+        && Path::new(public_input_path).exists()
     {
         let monitoring_config = MonitoringConfig {
             enabled: true,
@@ -46,10 +46,10 @@ fn sha256_hash_chain_10(c: &mut Criterion) {
 
         run_detailed_benchmark(
             c,
-            "sha256_hash_chain_10",
+            "sha256_f2_hash_chain_10",
             circuit_path,
-            private_path,
-            public_path,
+            private_input_path,
+            public_input_path,
             create_transcript,
             Some(monitoring_config),
         );
@@ -58,5 +58,5 @@ fn sha256_hash_chain_10(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, sha256_single, sha256_hash_chain_10);
+criterion_group!(benches, sha256_f2_single, sha256_f2_hash_chain_10);
 criterion_main!(benches);

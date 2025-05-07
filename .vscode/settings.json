@@ -3,6 +3,7 @@
         "cpus",
         "fcircuit",
         "FIPS",
+        "hashchain",
         "kary",
         "keystream",
         "pdecom",
