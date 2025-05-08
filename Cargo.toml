@@ -13,8 +13,8 @@ debug = true
 lto = true
 
 [dependencies]
-schmivitz = { git = "https://github.com/adust09/swanky", rev="58fe779e794613dbacce277597a5b69ca83b15fc"}
-schmivitz-snark = { git = "https://github.com/adust09/swanky", rev="58fe779e794613dbacce277597a5b69ca83b15fc"}
+schmivitz = { git = "https://github.com/adust09/swanky", rev="8bba422b4a7d6a97be4894a731d8d7aed15704a2"}
+schmivitz-snark = { git = "https://github.com/adust09/swanky", rev="8bba422b4a7d6a97be4894a731d8d7aed15704a2"}
 
 eyre = "0.6.12"
 rand = "0.8.5"
