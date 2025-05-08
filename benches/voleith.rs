@@ -1,19 +1,97 @@
-use criterion::{Criterion, Throughput};
+use std::{
+    io::Cursor,
+    path::Path,
+    time::{Duration, Instant},
+};
+
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use merlin::Transcript;
 use rand::thread_rng;
 use schmivitz::{insecure::InsecureVole, Proof};
-use std::time::Duration;
-use std::{io::Cursor, path::Path, time::Instant};
-
-use crate::utils::major::{
+use utils::major::{
     create_buffer_with_capacity, get_process_usage, init_system_monitoring, read_file_cached,
+    BenchmarkResult, MonitoringConfig,
 };
 
-use super::major::{BenchmarkResult, MonitoringConfig};
+mod utils;
 
-/// Run the proof generation and verification process with detailed measurements
-/// Performs 10 runs and averages the results
-pub fn run_proof(
+fn create_transcript() -> Transcript {
+    Transcript::new(b"voleith transcript")
+}
+
+fn sha256_single(c: &mut Criterion) {
+    let circuit_path = "circuits/sha256/single/circuit.txt";
+    let private_path = "circuits/sha256/single/private.txt";
+    let public_path = "circuits/sha256/single/public.txt";
+
+    let monitoring_config =
+        MonitoringConfig { enabled: true, refresh_interval_ms: 50, stabilization_delay_ms: 100 };
+
+    run_voleith_benchmark(
+        c,
+        "sha256_single",
+        circuit_path,
+        private_path,
+        public_path,
+        create_transcript,
+        Some(monitoring_config),
+    );
+}
+
+fn sha256_hash_chain_10(c: &mut Criterion) {
+    let circuit_path = "circuits/sha256/hashchain/circuit.txt";
+    let private_path = "circuits/sha256/hashchain/private.txt";
+    let public_path = "circuits/sha256/hashchain/public.txt";
+
+    if Path::new(circuit_path).exists()
+        && Path::new(private_path).exists()
+        && Path::new(public_path).exists()
+    {
+        let monitoring_config = MonitoringConfig {
+            enabled: true,
+            refresh_interval_ms: 50,
+            stabilization_delay_ms: 100,
+        };
+
+        run_voleith_benchmark(
+            c,
+            "sha256_hash_chain_10",
+            circuit_path,
+            private_path,
+            public_path,
+            create_transcript,
+            Some(monitoring_config),
+        );
+    } else {
+        println!("One or more files do not exist.");
+    }
+}
+
+fn keccak_f_single(c: &mut Criterion) {
+    // Benchmark f2 field
+    let circuit_path = "circuits/keccak_f/circuit.txt";
+    let private_path = "circuits/keccak_f/private.txt";
+    let public_path = "circuits/keccak_f/public.txt";
+
+    // Create a monitoring config with reduced overhead
+    let monitoring_config =
+        MonitoringConfig { enabled: true, refresh_interval_ms: 50, stabilization_delay_ms: 100 };
+
+    run_voleith_benchmark(
+        c,
+        "keccak_f",
+        circuit_path,
+        private_path,
+        public_path,
+        create_transcript,
+        Some(monitoring_config),
+    );
+}
+
+criterion_group!(benches, sha256_single, sha256_hash_chain_10, keccak_f_single);
+criterion_main!(benches);
+
+pub fn run_voleith_proof(
     circuit_path_str: &str,
     private_input_path_str: &str,
     public_input_path_str: &str,
@@ -174,7 +252,7 @@ pub fn run_proof(
     }
 }
 
-pub fn run_detailed_benchmark(
+pub fn run_voleith_benchmark(
     c: &mut Criterion,
     group_name: &str,
     circuit_path: &str,
@@ -207,8 +285,13 @@ pub fn run_detailed_benchmark(
 
     // Use provided monitoring config or default
     let config = monitoring_config.unwrap_or_default();
-    let benchmark_result =
-        run_proof(circuit_path, private_path, public_path, create_transcript_fn, Some(config));
+    let benchmark_result = run_voleith_proof(
+        circuit_path,
+        private_path,
+        public_path,
+        create_transcript_fn,
+        Some(config),
+    );
 
     println!("Running Criterion measurements for proof generation...");
     group.bench_function("proof_generation_time", |b| {

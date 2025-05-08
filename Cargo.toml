@@ -41,9 +41,5 @@ tempfile = "3.3.0"
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [[bench]]
-name = "keccak_f"
-harness = false
-
-[[bench]]
-name = "sha256"
+name = "voleith"
 harness = false
