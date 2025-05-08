@@ -12,7 +12,7 @@ use tracing_subscriber::layer::SubscriberExt;
 // The serialize module is now part of the same crate
 use crate::serialize;
 
-pub fn prove(vole_proof: Proof<InsecureVole>, proof_output_path: &str) -> Result<()> {
+pub fn _prove(vole_proof: Proof<InsecureVole>, proof_output_path: &str) -> Result<()> {
     let mut layer = ConstraintLayer::default();
     layer.mode = TracingMode::OnlyConstraints;
     let subscriber = tracing_subscriber::Registry::default().with(layer);

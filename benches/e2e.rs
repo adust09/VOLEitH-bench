@@ -5,7 +5,7 @@ use std::{
 };
 
 use ark_bn254::{Bn254, Fr as Bn254Fr};
-use ark_groth16::{Groth16, Proof as GrothProof};
+use ark_groth16::Groth16;
 use ark_relations::r1cs::ConstraintSystem;
 use ark_snark::SNARK;
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
@@ -13,7 +13,6 @@ use merlin::Transcript;
 use rand::thread_rng;
 use schmivitz::{insecure::InsecureVole, Proof};
 use schmivitz_snark::build_circuit;
-use serde_json;
 
 // Import the serialize module from the crate
 extern crate voleith_bench;
@@ -21,7 +20,6 @@ use utils::major::{
     create_buffer_with_capacity, get_process_usage, init_system_monitoring, read_file_cached,
     BenchmarkResult, MonitoringConfig,
 };
-use voleith_bench::serialize;
 
 mod utils;
 
@@ -41,6 +39,27 @@ fn sha256_single(c: &mut Criterion) {
     run_e2e_benchmark(
         c,
         "sha256_single_e2e",
+        circuit_path,
+        private_path,
+        public_path,
+        proof_output_path,
+        create_transcript,
+        Some(monitoring_config),
+    );
+}
+
+fn sample(c: &mut Criterion) {
+    let circuit_path = "circuits/sample_circuit.txt";
+    let private_path = "circuits/sample_private.txt";
+    let public_path = "circuits/sample_public.txt";
+    let proof_output_path = "foundry/script/snark_proof.json";
+
+    let monitoring_config =
+        MonitoringConfig { enabled: true, refresh_interval_ms: 50, stabilization_delay_ms: 100 };
+
+    run_e2e_benchmark(
+        c,
+        "sample",
         circuit_path,
         private_path,
         public_path,
@@ -102,7 +121,8 @@ fn keccak_f_single(c: &mut Criterion) {
     );
 }
 
-criterion_group!(benches, sha256_single, sha256_hash_chain_10, keccak_f_single);
+// criterion_group!(benches, sample, sha256_single, sha256_hash_chain_10, keccak_f_single);
+criterion_group!(benches, sample);
 criterion_main!(benches);
 
 pub fn run_e2e_proof(
@@ -329,6 +349,10 @@ pub fn run_e2e_proof(
         prover_memory_usage_mb: prover_mem_usage,
         verifier_cpu_usage,
         verifier_memory_usage_mb: verifier_mem_usage,
+        snark_cpu_usage,
+        snark_memory_usage_mb: snark_mem_usage,
+        snark_proof_generation_time_ms: snark_duration.as_millis() as u64,
+        snark_proof_size_bytes,
     }
 }
 
@@ -489,10 +513,10 @@ pub fn run_e2e_benchmark(
                 let circuit = build_circuit(cs.clone(), vole_proof.clone());
 
                 let mut rng = ark_std::test_rng();
-                let (pk, vk) =
+                let (pk, _vk) =
                     Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), &mut rng).unwrap();
 
-                let public_input: Vec<Bn254Fr> = Vec::new();
+                let _public_input: Vec<Bn254Fr> = Vec::new();
 
                 let _snark_proof = Groth16::prove(&pk, circuit.clone(), &mut rng)
                     .expect("Failed to generate SNARK proof");
@@ -577,8 +601,13 @@ pub fn run_e2e_benchmark(
     println!("VOLE Verifier Computation Load:");
     println!("  - CPU Usage: {:.2}%", benchmark_result.verifier_cpu_usage);
     println!("  - Memory Usage: {:.2} MB", benchmark_result.verifier_memory_usage_mb);
-
-    println!("====== {} BENCHMARK COMPLETE ======\n", group_name);
-
+    println!("SNARK Prover Computation Load:");
+    println!("  - SNARK CPU Usage: {:.2}%", benchmark_result.snark_cpu_usage);
+    println!("  - SNARK Memory Usage: {:.2} MB", benchmark_result.snark_memory_usage_mb);
+    println!(
+        "  - SNARK proof generation time: {} ms",
+        benchmark_result.snark_proof_generation_time_ms
+    );
+    println!("  - SNARK proof size: {} bytes", benchmark_result.snark_proof_size_bytes);
     group.finish();
 }

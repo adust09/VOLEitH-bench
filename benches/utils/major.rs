@@ -17,6 +17,10 @@ pub struct BenchmarkResult {
     pub prover_memory_usage_mb: f64,
     pub verifier_cpu_usage: f32,
     pub verifier_memory_usage_mb: f64,
+    pub snark_cpu_usage: f32,
+    pub snark_memory_usage_mb: f64,
+    pub snark_proof_generation_time_ms: u64,
+    pub snark_proof_size_bytes: usize,
 }
 
 #[derive(Debug, Clone, Copy)]

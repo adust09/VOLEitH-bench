@@ -34,7 +34,7 @@ fn main() -> Result<(), eyre::Report> {
             let algorithm_type = algorithm.as_deref().unwrap_or("keccak_f");
 
             // Circuit paths and output prefix
-            let (circuit_path, private_path, public_path, output_prefix);
+            let (circuit_path, private_path, public_path, _output_prefix);
 
             match algorithm_type {
                 "keccak_f" => {
@@ -42,14 +42,14 @@ fn main() -> Result<(), eyre::Report> {
                     circuit_path = format!("circuits/{}/circuit.txt", algorithm_type);
                     private_path = format!("circuits/{}/private.txt", algorithm_type);
                     public_path = format!("circuits/{}/public.txt", algorithm_type);
-                    output_prefix = format!("{}", algorithm_type);
+                    _output_prefix = format!("{}", algorithm_type);
                 }
                 "sha256" => {
                     println!("Running prove with algorithm: {}", algorithm_type);
                     circuit_path = format!("circuits/{}/circuit.txt", algorithm_type);
                     private_path = format!("circuits/{}/private.txt", algorithm_type);
                     public_path = format!("circuits/{}/public.txt", algorithm_type);
-                    output_prefix = format!("{}", algorithm_type);
+                    _output_prefix = format!("{}", algorithm_type);
                 }
                 _ => {
                     return Err(eyre::eyre!("Unsupported algorithm: {}", algorithm_type));
