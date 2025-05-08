@@ -1,7 +1,12 @@
-mod e2e;
+// Import modules from our library
+extern crate voleith_bench;
+
+// Re-export modules that are only used in the binary
 mod serialize;
 mod snark;
-mod voleith;
+
+// Use the modules from our library
+use voleith_bench::voleith;
 
 use clap::Parser;
 use eyre::Ok;
@@ -51,11 +56,8 @@ fn main() -> Result<(), eyre::Report> {
                 }
             }
 
-            // Create output path
-            let output_path = format!("results/proofs/{}.json", output_prefix);
-
             // Run proof with the selected circuit
-            let result = voleith::prove(&circuit_path, &private_path, &public_path, &output_path)?;
+            let result = voleith::prove(&circuit_path, &private_path, &public_path)?;
 
             Ok(result)
         }

@@ -9,6 +9,7 @@ use schmivitz_snark::build_circuit;
 use std::{fs, path::Path};
 use tracing_subscriber::layer::SubscriberExt;
 
+// The serialize module is now part of the same crate
 use crate::serialize;
 
 pub fn prove(vole_proof: Proof<InsecureVole>, proof_output_path: &str) -> Result<()> {

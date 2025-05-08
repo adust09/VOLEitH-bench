@@ -3,6 +3,11 @@ name = "voleitH-bench"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "voleith_bench"
+path = "src/mod.rs"
+crate-type = ["rlib", "dylib"]
+
 [profile.release]
 debug = true
 lto = true

@@ -10,6 +10,7 @@ use schmivitz::{insecure::InsecureVole, Proof};
 use schmivitz_snark::build_circuit;
 use std::{fs, io::Cursor, path::Path};
 
+// The serialize module is now part of the same crate
 use crate::serialize;
 
 pub fn e2e(

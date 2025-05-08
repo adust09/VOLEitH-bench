@@ -4,43 +4,12 @@ use rand::thread_rng;
 use schmivitz::{insecure::InsecureVole, Proof};
 use std::time::Duration;
 use std::{io::Cursor, path::Path, time::Instant};
-use sysinfo::{PidExt, ProcessExt, System, SystemExt};
 
-use crate::utils::major::{create_buffer_with_capacity, init_system_monitoring, read_file_cached};
+use crate::utils::major::{
+    create_buffer_with_capacity, get_process_usage, init_system_monitoring, read_file_cached,
+};
 
 use super::major::{BenchmarkResult, MonitoringConfig};
-
-/// Get process resource usage from a System instance
-/// Note: cpu_usage() already returns the delta since last refresh
-pub fn get_process_usage(system_opt: &mut Option<System>, config: &MonitoringConfig) -> (f32, f64) {
-    // If monitoring is disabled, return zeros
-    let Some(system) = system_opt else {
-        return (0.0, 0.0);
-    };
-
-    // Refresh only the specific components we need
-    system.refresh_processes();
-    system.refresh_memory();
-    system.refresh_cpu();
-
-    // Sleep briefly to allow CPU measurement to register (configurable)
-    if config.refresh_interval_ms > 0 {
-        std::thread::sleep(std::time::Duration::from_millis(config.refresh_interval_ms));
-    }
-
-    // Refresh again to get measurements that account for the time passed
-    system.refresh_processes();
-    system.refresh_cpu();
-
-    let pid = std::process::id();
-    if let Some(process) = system.process(sysinfo::Pid::from_u32(pid)) {
-        let cpu_usage = process.cpu_usage();
-        let memory_usage = process.memory() as f64 / 1024.0 / 1024.0;
-        return (cpu_usage, memory_usage);
-    }
-
-    (0.0, 0.0)
-}
 
 /// Run the proof generation and verification process with detailed measurements
 /// Performs 10 runs and averages the results
