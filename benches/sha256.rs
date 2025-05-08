@@ -3,8 +3,8 @@ use std::path::Path;
 use criterion::{criterion_group, criterion_main, Criterion};
 use merlin::Transcript;
 
-mod common;
-use common::{run_detailed_benchmark, MonitoringConfig};
+mod utils;
+use utils::{common::run_detailed_benchmark, major::MonitoringConfig};
 
 fn create_transcript() -> Transcript {
     Transcript::new(b"sha256 transcript")
