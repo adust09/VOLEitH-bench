@@ -48,3 +48,23 @@ cargo bench --bench {benchmark_name}
 ```
 sha256 and keccak_f are the circuits implemented at [Bristol Fashion](https://github.com/GaloisInc/swanky/tree/dev/bristol-fashion/circuits) transpiled to SIEVE IR and compiled by Schmivitz. If you want to benchmark the circuits implemented in Bristol Fashion, please use [this](https://github.com/adust09/swanky/tree/dev/bristol2sieve) as a reference for your transpile.
 Currently we are copying the generated circuits to this project.Private Input and Public Input files are not generated, so prepare them yourself.
+
+## sample
+====== sample BENCHMARK RESULTS ======
+VOLE Proof Metrics:
+  - Generation Time: 0ns (0 ms)
+  - Verification Time: 0ns (0 ms)
+  - Proof Size: 22387 bytes
+  - Communication Overhead: 22452 bytes
+Circuit Size: 356 bytes
+VOLE Prover Computation Load:
+  - CPU Usage: 0.03%
+  - Memory Usage: 12.22 MB
+VOLE Verifier Computation Load:
+  - CPU Usage: 0.08%
+  - Memory Usage: 14.27 MB
+SNARK Prover Computation Load:
+  - SNARK CPU Usage: 0.03%
+  - SNARK Memory Usage: 231.06 MB
+  - SNARK proof generation time: 135 ms
+  - SNARK proof size: 1055 bytes
