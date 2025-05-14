@@ -1,66 +1,52 @@
-## Foundry
+# Foundry for solidity verifier
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## Deploy solidity verifier
 
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
+1. Start anvil
 
 ```shell
 $ anvil
 ```
 
-### Deploy
+2. Set your private key as an environment variable:
+
+Open another shell and run this script, you can find private key in anvil window.
 
 ```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+$ export PRIVATE_KEY=<your_private_key>
 ```
 
-### Cast
+3. Deploy the VOLE Verifier contract
+The script will deploy the Verifier contract and output its address. Save this address as you'll need it for proof verification.
 
 ```shell
-$ cast <subcommand>
+$ forge script script/deploy.s.sol:VOLEVerifierScript --rpc-url 127.0.0.1:8545 --broadcast
 ```
 
-### Help
+## Verify proof
+
+To verify a SNARK proof using the verification script
+
+1. Make sure you have a `snark_proof.json` file in the `script` directory containing the proof data in the following format:
+
+```json
+{
+    "a": ["<aX>", "<aY>"],
+    "b": [["<bX0>", "<bX1>"], ["<bY0>", "<bY1>"]],
+    "c": ["<cX>", "<cY>"]
+}
+```
+
+2. Set the `VERIFIER_ADDRESS` environment variable to the address of your deployed Verifier contract:
 
 ```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+$ export VERIFIER_ADDRESS=<your_verifier_contract_address>
 ```
+
+3. Run the verification script:
+
+```shell
+$ forge script script/verify.s.sol:VerifyProofScript --rpc-url 127.0.0.1:8545 --private-key <your_private_key>
+```
+
+The script will read the proof from `snark_proof.json`, parse it, and verify it using the deployed Verifier contract. The verification result will be printed to the console.
