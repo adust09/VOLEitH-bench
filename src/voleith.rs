@@ -4,11 +4,7 @@ use rand::thread_rng;
 use schmivitz::{insecure::InsecureVole, Proof};
 use std::{fs, io::Cursor, path::Path};
 
-pub fn prove(
-    circuit_path_str: &str,
-    private_input_path_str: &str,
-    public_input_path_str: &str,
-) -> Result<()> {
+pub fn prove(circuit_path_str: &str, private_input_path_str: &str) -> Result<()> {
     // Read circuit and input files
     let circuit_path = Path::new(circuit_path_str);
     let circuit_bytes = fs::read_to_string(circuit_path)
@@ -18,11 +14,6 @@ pub fn prove(
     let private_input_path = Path::new(private_input_path_str);
     if !private_input_path.exists() {
         return Err(eyre::eyre!("Private input file does not exist at {:?}", private_input_path));
-    }
-
-    let public_input_path = Path::new(public_input_path_str);
-    if !public_input_path.exists() {
-        return Err(eyre::eyre!("Public input file does not exist at {:?}", public_input_path));
     }
 
     // Set up for proof generation

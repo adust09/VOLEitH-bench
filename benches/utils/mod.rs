@@ -1,1 +1,2 @@
-pub mod major;
+pub mod e2e;
+pub mod voleith;

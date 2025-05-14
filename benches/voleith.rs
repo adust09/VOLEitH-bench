@@ -8,7 +8,7 @@ use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use merlin::Transcript;
 use rand::thread_rng;
 use schmivitz::{insecure::InsecureVole, Proof};
-use utils::major::{
+use utils::voleith::{
     create_buffer_with_capacity, get_process_usage, init_system_monitoring, read_file_cached,
     BenchmarkResult, MonitoringConfig,
 };
@@ -249,10 +249,6 @@ pub fn run_voleith_proof(
         prover_memory_usage_mb: prover_mem_usage,
         verifier_cpu_usage,
         verifier_memory_usage_mb: verifier_mem_usage,
-        snark_cpu_usage: todo!(),
-        snark_memory_usage_mb: todo!(),
-        snark_proof_generation_time_ms: todo!(),
-        snark_proof_size_bytes: todo!(),
     }
 }
 

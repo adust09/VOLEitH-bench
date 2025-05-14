@@ -16,7 +16,7 @@ use schmivitz_snark::build_circuit;
 
 // Import the serialize module from the crate
 extern crate voleith_bench;
-use utils::major::{
+use utils::e2e::{
     create_buffer_with_capacity, get_process_usage, init_system_monitoring, read_file_cached,
     BenchmarkResult, MonitoringConfig,
 };
