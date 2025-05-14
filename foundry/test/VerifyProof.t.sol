@@ -8,17 +8,18 @@ import {Test, console} from "forge-std/Test.sol";
 
 contract VerifyProofTest is Test {
     VerifyProofScript public verifyProofScript;
+    Verifier public verifier;
+    address public verifierAddress;
 
     function setUp() public {
+        verifier = new Verifier();
+        verifierAddress = address(verifier);
         verifyProofScript = new VerifyProofScript();
     }
 
     function testVerifyProof() public {
-        // Set the VERIFIER_ADDRESS environment variable
-        address verifierAddress = vm.envAddress("VERIFIER_ADDRESS");
-        vm.envString("VERIFIER_ADDRESS", vm.toString(verifierAddress));
-
-        // Run the script's run function
-        verifyProofScript.run();
+        vm.setEnv("VERIFIER_ADDRESS", vm.toString(verifierAddress));
+        verifyProofScript.run();        
+        console2.log("Gas used:", gasleft());
     }
 }

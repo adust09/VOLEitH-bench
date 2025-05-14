@@ -46,7 +46,15 @@ $ export VERIFIER_ADDRESS=<your_verifier_contract_address>
 3. Run the verification script:
 
 ```shell
-$ forge script script/verify.s.sol:VerifyProofScript --rpc-url 127.0.0.1:8545 --private-key <your_private_key>
+$ forge script script/verify.s.sol:VerifyProofScript --rpc-url 127.0.0.1:8545
 ```
 
 The script will read the proof from `snark_proof.json`, parse it, and verify it using the deployed Verifier contract. The verification result will be printed to the console.
+
+## Bench gas usage
+
+You can get gas usage
+
+```shell
+$ forge test --gas-report -vvvv
+```
