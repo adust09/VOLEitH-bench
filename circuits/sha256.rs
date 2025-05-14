@@ -11,9 +11,9 @@ fn create_transcript() -> Transcript {
 }
 
 fn sha256_f2_single(c: &mut Criterion) {
-    let f2_circuit_path = "circuits/sha256/f2/single/circuit.txt";
-    let f2_private_path = "circuits/sha256/f2/single/private.txt";
-    let f2_public_path = "circuits/sha256/f2/single/public.txt";
+    let circuit_path = "circuits/sha256/circuit.txt";
+    let private_input_path = "circuits/sha256/private.txt";
+    let public_input_path = "circuits/sha256/public.txt";
 
     let monitoring_config =
         MonitoringConfig { enabled: true, refresh_interval_ms: 50, stabilization_delay_ms: 100 };
@@ -21,22 +21,22 @@ fn sha256_f2_single(c: &mut Criterion) {
     run_detailed_benchmark(
         c,
         "sha256_f2_single",
-        f2_circuit_path,
-        f2_private_path,
-        f2_public_path,
+        circuit_path,
+        private_input_path,
+        public_input_path,
         create_transcript,
         Some(monitoring_config),
     );
 }
 
 fn sha256_f2_hash_chain_10(c: &mut Criterion) {
-    let f2_circuit_path = "circuits/sha256/f2/hashchain/circuit.txt";
-    let f2_private_path = "circuits/sha256/f2/hashchain/private.txt";
-    let f2_public_path = "circuits/sha256/f2/hashchain/public.txt";
+    let circuit_path = "circuits/sha256/circuit.txt";
+    let private_input_path = "circuits/sha256/private.txt";
+    let public_input_path = "circuits/sha256/public.txt";
 
-    if Path::new(f2_circuit_path).exists()
-        && Path::new(f2_private_path).exists()
-        && Path::new(f2_public_path).exists()
+    if Path::new(circuit_path).exists()
+        && Path::new(private_input_path).exists()
+        && Path::new(public_input_path).exists()
     {
         let monitoring_config = MonitoringConfig {
             enabled: true,
@@ -47,9 +47,9 @@ fn sha256_f2_hash_chain_10(c: &mut Criterion) {
         run_detailed_benchmark(
             c,
             "sha256_f2_hash_chain_10",
-            f2_circuit_path,
-            f2_private_path,
-            f2_public_path,
+            circuit_path,
+            private_input_path,
+            public_input_path,
             create_transcript,
             Some(monitoring_config),
         );

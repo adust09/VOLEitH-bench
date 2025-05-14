@@ -1,142 +1,97 @@
-use criterion::{Criterion, Throughput};
+use std::{
+    io::Cursor,
+    path::Path,
+    time::{Duration, Instant},
+};
+
+use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use merlin::Transcript;
-use once_cell::sync::Lazy;
 use rand::thread_rng;
 use schmivitz::{insecure::InsecureVole, Proof};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::Mutex;
-use std::time::Duration;
-use std::{fs, io::Cursor, path::Path, time::Instant};
-use sysinfo::{PidExt, ProcessExt, System, SystemExt};
+use utils::voleith::{
+    create_buffer_with_capacity, get_process_usage, init_system_monitoring, read_file_cached,
+    BenchmarkResult, MonitoringConfig,
+};
 
-// Constants for buffer sizes
-const INITIAL_BUFFER_CAPACITY: usize = 1024 * 1024; // 1MB initial capacity for buffers
+mod utils;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BenchmarkResult {
-    pub proof_generation_time_ms: u64,
-    pub proof_verification_time_ms: u64,
-    pub proof_size_bytes: usize,
-    pub communication_overhead_bytes: usize,
-    pub prover_cpu_usage: f32,
-    pub prover_memory_usage_mb: f64,
-    pub verifier_cpu_usage: f32,
-    pub verifier_memory_usage_mb: f64,
+fn create_transcript() -> Transcript {
+    Transcript::new(b"voleith transcript")
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct MonitoringConfig {
-    pub enabled: bool,
-    pub refresh_interval_ms: u64,
-    pub stabilization_delay_ms: u64,
+fn sha256_single(c: &mut Criterion) {
+    let circuit_path = "circuits/sha256/single/circuit.txt";
+    let private_path = "circuits/sha256/single/private.txt";
+    let public_path = "circuits/sha256/single/public.txt";
+
+    let monitoring_config =
+        MonitoringConfig { enabled: true, refresh_interval_ms: 50, stabilization_delay_ms: 100 };
+
+    run_voleith_benchmark(
+        c,
+        "sha256_single",
+        circuit_path,
+        private_path,
+        public_path,
+        create_transcript,
+        Some(monitoring_config),
+    );
 }
 
-impl Default for MonitoringConfig {
-    fn default() -> Self {
-        Self {
+fn sha256_hash_chain_10(c: &mut Criterion) {
+    let circuit_path = "circuits/sha256/hashchain/circuit.txt";
+    let private_path = "circuits/sha256/hashchain/private.txt";
+    let public_path = "circuits/sha256/hashchain/public.txt";
+
+    if Path::new(circuit_path).exists()
+        && Path::new(private_path).exists()
+        && Path::new(public_path).exists()
+    {
+        let monitoring_config = MonitoringConfig {
             enabled: true,
-            refresh_interval_ms: 50,     // Reduced from 100ms
-            stabilization_delay_ms: 100, // Reduced from 200ms
-        }
+            refresh_interval_ms: 50,
+            stabilization_delay_ms: 100,
+        };
+
+        run_voleith_benchmark(
+            c,
+            "sha256_hash_chain_10",
+            circuit_path,
+            private_path,
+            public_path,
+            create_transcript,
+            Some(monitoring_config),
+        );
+    } else {
+        println!("One or more files do not exist.");
     }
 }
 
-// Pre-allocate a buffer with capacity for reuse
-fn create_buffer_with_capacity(data: &[u8]) -> Vec<u8> {
-    let mut buffer = Vec::with_capacity(INITIAL_BUFFER_CAPACITY.max(data.len()));
-    buffer.extend_from_slice(data);
-    buffer
+fn keccak_f_single(c: &mut Criterion) {
+    // Benchmark f2 field
+    let circuit_path = "circuits/keccak_f/circuit.txt";
+    let private_path = "circuits/keccak_f/private.txt";
+    let public_path = "circuits/keccak_f/public.txt";
+
+    // Create a monitoring config with reduced overhead
+    let monitoring_config =
+        MonitoringConfig { enabled: true, refresh_interval_ms: 50, stabilization_delay_ms: 100 };
+
+    run_voleith_benchmark(
+        c,
+        "keccak_f",
+        circuit_path,
+        private_path,
+        public_path,
+        create_transcript,
+        Some(monitoring_config),
+    );
 }
 
-// Global cache for file contents to avoid repeated file I/O
-static FILE_CACHE: Lazy<Mutex<HashMap<String, Vec<u8>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+criterion_group!(benches, sha256_single, sha256_hash_chain_10, keccak_f_single);
+criterion_main!(benches);
 
-/// Read file contents efficiently, using cache when possible
-/// Returns file content as bytes
-pub fn read_file_cached(path: &Path) -> Result<Vec<u8>, std::io::Error> {
-    let path_str = path.to_string_lossy().to_string();
-
-    // Try to get from cache first
-    {
-        let cache = FILE_CACHE.lock().unwrap();
-        if let Some(content) = cache.get(&path_str) {
-            return Ok(content.clone());
-        }
-    }
-
-    // Not in cache, read from disk
-    let content = fs::read(path)?;
-
-    // Store in cache for future use
-    {
-        let mut cache = FILE_CACHE.lock().unwrap();
-        cache.insert(path_str, content.clone());
-    }
-
-    Ok(content)
-}
-
-/// Initialize system monitoring and get the initial CPU/memory values
-pub fn init_system_monitoring(config: &MonitoringConfig) -> Option<System> {
-    if !config.enabled {
-        return None;
-    }
-
-    let mut system = System::new_all();
-
-    // Only refresh specific components we need instead of all
-    system.refresh_processes();
-    system.refresh_memory();
-    system.refresh_cpu();
-
-    // Sleep to allow initial measurements to settle (configurable)
-    if config.stabilization_delay_ms > 0 {
-        std::thread::sleep(std::time::Duration::from_millis(config.stabilization_delay_ms));
-    }
-
-    // Must refresh again to establish the baseline for CPU measurements
-    system.refresh_processes();
-    system.refresh_cpu();
-
-    Some(system)
-}
-
-/// Get process resource usage from a System instance
-/// Note: cpu_usage() already returns the delta since last refresh
-pub fn get_process_usage(system_opt: &mut Option<System>, config: &MonitoringConfig) -> (f32, f64) {
-    // If monitoring is disabled, return zeros
-    let Some(system) = system_opt else {
-        return (0.0, 0.0);
-    };
-
-    // Refresh only the specific components we need
-    system.refresh_processes();
-    system.refresh_memory();
-    system.refresh_cpu();
-
-    // Sleep briefly to allow CPU measurement to register (configurable)
-    if config.refresh_interval_ms > 0 {
-        std::thread::sleep(std::time::Duration::from_millis(config.refresh_interval_ms));
-    }
-
-    // Refresh again to get measurements that account for the time passed
-    system.refresh_processes();
-    system.refresh_cpu();
-
-    let pid = std::process::id();
-    if let Some(process) = system.process(sysinfo::Pid::from_u32(pid)) {
-        let cpu_usage = process.cpu_usage();
-        let memory_usage = process.memory() as f64 / 1024.0 / 1024.0;
-        return (cpu_usage, memory_usage);
-    }
-
-    (0.0, 0.0)
-}
-
-/// Run the proof generation and verification process with detailed measurements
-/// Performs 10 runs and averages the results
-pub fn run_proof(
+pub fn run_voleith_proof(
     circuit_path_str: &str,
     private_input_path_str: &str,
     public_input_path_str: &str,
@@ -297,7 +252,7 @@ pub fn run_proof(
     }
 }
 
-pub fn run_detailed_benchmark(
+pub fn run_voleith_benchmark(
     c: &mut Criterion,
     group_name: &str,
     circuit_path: &str,
@@ -330,8 +285,13 @@ pub fn run_detailed_benchmark(
 
     // Use provided monitoring config or default
     let config = monitoring_config.unwrap_or_default();
-    let benchmark_result =
-        run_proof(circuit_path, private_path, public_path, create_transcript_fn, Some(config));
+    let benchmark_result = run_voleith_proof(
+        circuit_path,
+        private_path,
+        public_path,
+        create_transcript_fn,
+        Some(config),
+    );
 
     println!("Running Criterion measurements for proof generation...");
     group.bench_function("proof_generation_time", |b| {

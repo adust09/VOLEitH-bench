@@ -28,7 +28,7 @@ pub fn extract_hex(s: String) -> String {
 }
 
 /// Convert a Groth16 proof to a serializable format
-pub fn convert_to_serializable(snark_proof: &GrothProof<Bn254>) -> SerializableProof {
+pub fn _convert_to_serializable(snark_proof: &GrothProof<Bn254>) -> SerializableProof {
     SerializableProof {
         a: [extract_hex(snark_proof.a.x.to_string()), extract_hex(snark_proof.a.y.to_string())],
         b: [
@@ -48,7 +48,7 @@ pub fn convert_to_serializable(snark_proof: &GrothProof<Bn254>) -> SerializableP
 /// Serialize a proof to JSON and write it to a file
 pub fn serialize_and_save_proof(snark_proof: &GrothProof<Bn254>, output_path: &str) -> Result<()> {
     // Convert the proof to our serializable format
-    let serializable_proof = convert_to_serializable(snark_proof);
+    let serializable_proof = _convert_to_serializable(snark_proof);
 
     // Serialize to JSON
     let json = serde_json::to_string_pretty(&serializable_proof)?;

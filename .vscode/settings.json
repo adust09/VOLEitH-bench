@@ -3,12 +3,14 @@
         "cpus",
         "fcircuit",
         "FIPS",
+        "hashchain",
         "kary",
         "keystream",
         "pdecom",
         "RCON",
         "SBOX",
-        "symm"
+        "symm",
+        "voleith"
     ],
     "commentTranslate.hover.enabled": false,
     "solidity.compileUsingRemoteVersion": "v0.8.22+commit.4fc1097e"
