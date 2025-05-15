@@ -10,7 +10,7 @@ contract VerifyProofScript is Script {
     function run() public {
         // Read the proof from the JSON file
         string memory root = vm.projectRoot();
-        string memory path = string.concat(root, "/script/snark_proof.json");
+        string memory path = string.concat(root, "/src/snark_proof.json");
         string memory json = vm.readFile(path);
         
         // Parse a
