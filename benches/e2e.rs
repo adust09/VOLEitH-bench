@@ -1,4 +1,5 @@
 use std::{
+    fs,
     io::Cursor,
     path::Path,
     time::{Duration, Instant},
@@ -8,6 +9,7 @@ use ark_bn254::{Bn254, Fr as Bn254Fr};
 use ark_groth16::Groth16;
 use ark_relations::r1cs::ConstraintSystem;
 use ark_snark::SNARK;
+use arkworks_solidity_verifier::SolidityVerifier;
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use merlin::Transcript;
 use rand::thread_rng;
@@ -559,6 +561,15 @@ pub fn run_e2e_benchmark(
             let mut rng = ark_std::test_rng();
             let (pk, vk) =
                 Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), &mut rng).unwrap();
+
+            let solidity_verifier = Groth16::<Bn254>::export(&vk);
+            let output_dir = Path::new("foundry");
+            if !output_dir.exists() {
+                let _ = fs::create_dir_all(output_dir);
+            }
+            let output_path = output_dir.join("src/vole_verifier_boolean.sol");
+            let _ = fs::write(&output_path, solidity_verifier);
+            println!("Solidity verifier generated at: {}", output_path.display());
 
             let public_input = vec![];
 
