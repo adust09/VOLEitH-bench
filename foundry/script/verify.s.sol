@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Script, console2} from "forge-std/Script.sol";
-import {Verifier, Pairing} from "../src/vole_verifier.sol";
+import {Verifier, Pairing} from "../src/verifier.sol";
 
 contract VerifyProofScript is Script {
     function setUp() public {}
@@ -10,7 +10,7 @@ contract VerifyProofScript is Script {
     function run() public {
         // Read the proof from the JSON file
         string memory root = vm.projectRoot();
-        string memory path = string.concat(root, "/script/snark_proof.json");
+        string memory path = string.concat(root, "/src/proof.json");
         string memory json = vm.readFile(path);
         
         // Parse a

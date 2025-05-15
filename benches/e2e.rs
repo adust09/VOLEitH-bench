@@ -1,4 +1,5 @@
 use std::{
+    fs,
     io::Cursor,
     path::Path,
     time::{Duration, Instant},
@@ -8,6 +9,7 @@ use ark_bn254::{Bn254, Fr as Bn254Fr};
 use ark_groth16::Groth16;
 use ark_relations::r1cs::ConstraintSystem;
 use ark_snark::SNARK;
+use arkworks_solidity_verifier::SolidityVerifier;
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use merlin::Transcript;
 use rand::thread_rng;
@@ -27,6 +29,26 @@ fn create_transcript() -> Transcript {
     Transcript::new(b"e2e transcript")
 }
 
+fn e2e(c: &mut Criterion) {
+    let circuit_path = "circuits/sample_circuit.txt";
+    let private_path = "circuits/sample_private.txt";
+    let public_path = "circuits/sample_public.txt";
+    let proof_output_path = "foundry/src/proof.json";
+
+    let monitoring_config =
+        MonitoringConfig { enabled: true, refresh_interval_ms: 50, stabilization_delay_ms: 100 };
+
+    run_e2e_benchmark(
+        c,
+        "sample",
+        circuit_path,
+        private_path,
+        public_path,
+        proof_output_path,
+        create_transcript,
+        Some(monitoring_config),
+    );
+}
 fn sha256_single(c: &mut Criterion) {
     let circuit_path = "circuits/sha256/single/circuit.txt";
     let private_path = "circuits/sha256/single/private.txt";
@@ -39,27 +61,6 @@ fn sha256_single(c: &mut Criterion) {
     run_e2e_benchmark(
         c,
         "sha256_single_e2e",
-        circuit_path,
-        private_path,
-        public_path,
-        proof_output_path,
-        create_transcript,
-        Some(monitoring_config),
-    );
-}
-
-fn sample(c: &mut Criterion) {
-    let circuit_path = "circuits/sample_circuit.txt";
-    let private_path = "circuits/sample_private.txt";
-    let public_path = "circuits/sample_public.txt";
-    let proof_output_path = "foundry/script/snark_proof.json";
-
-    let monitoring_config =
-        MonitoringConfig { enabled: true, refresh_interval_ms: 50, stabilization_delay_ms: 100 };
-
-    run_e2e_benchmark(
-        c,
-        "sample",
         circuit_path,
         private_path,
         public_path,
@@ -122,7 +123,7 @@ fn keccak_f_single(c: &mut Criterion) {
 }
 
 // criterion_group!(benches, sample, sha256_single, sha256_hash_chain_10, keccak_f_single);
-criterion_group!(benches, sample);
+criterion_group!(benches, e2e);
 criterion_main!(benches);
 
 pub fn run_e2e_proof(
@@ -559,6 +560,15 @@ pub fn run_e2e_benchmark(
             let mut rng = ark_std::test_rng();
             let (pk, vk) =
                 Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), &mut rng).unwrap();
+
+            let solidity_verifier = Groth16::<Bn254>::export(&vk);
+            let output_dir = Path::new("foundry");
+            if !output_dir.exists() {
+                let _ = fs::create_dir_all(output_dir);
+            }
+            let output_path = output_dir.join("src/verifier.sol");
+            let _ = fs::write(&output_path, solidity_verifier);
+            println!("Solidity verifier generated at: {}", output_path.display());
 
             let public_input = vec![];
 
