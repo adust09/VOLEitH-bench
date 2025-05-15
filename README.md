@@ -42,26 +42,24 @@ cargo bench --bench voleith
 
 ## E2E Benchmark Results
 
-This is the E2E benchmark with 10 boolean gates.
-Unfortunately, SIEVE IR circuits such as sha256 are not realistic because of the time required to proof them.
+This is the E2E benchmark with 10 and 1000 boolean gates.
 
-| Metric | Value |
-|--------|-------|
-| **VOLE Proof Metrics** | |
-| Generation Time | 0 ms (0 ns) |
-| Verification Time | 0 ms (0 ns) |
-| Proof Size | 22,387 bytes |
-| Communication Overhead | 22,452 bytes |
-| **Circuit Size** | 356 bytes |
-| **VOLE Prover Computation Load** | |
-| CPU Usage | 0.03% |
-| Memory Usage | 12.22 MB |
-| **VOLE Verifier Computation Load** | |
-| CPU Usage | 0.08% |
-| Memory Usage | 14.27 MB |
-| **SNARK Prover Computation Load** | |
-| CPU Usage | 0.03% |
-| Memory Usage | 231.06 MB |
-| Proof Generation Time | 135 ms |
-| Proof Size | 1,055 bytes |
-| **Gas Consumption** | 208,967 gas (mostly from elliptic curve pairing operations: 181,000 gas) |
+| Metric | 10 boolean gate | 1000 boolean gate |
+|--------|-------|-------|
+| **VOLE phase Metrics** | | |
+| Generation Time | 0 ms (0 ns) | 1 ms (1 ms) |
+| Verification Time | 0 ms (0 ns) | 1 ms (1 ms) |
+| Proof Size | 22,387 bytes | 127,327 bytes |
+| Communication Overhead | 22,452 bytes | 127,392 bytes |
+| Circuit Size | 356 bytes | 30,876 bytes |
+| VOLE Prover Computation Load |0.03%, 12.22 MB |0.05%, 13.50 MB |
+| VOLE Verifier Computation Load |0.08%, 14.27 MB |0.08%, 16.36 MB |
+| **SNARK phase Metrics** | | |
+| SNARK Prover Computation Load |0.03%, 231.06% |0.09%, 1,008,38 MB |
+| Proof Generation Time | 135 ms | 9,744 ms |
+| Proof Size | 1,055 bytes | 1,055 bytes |
+| On-Chain Verification Gas Cost | 208,967 gas  | 208,967 gas	 |
+
+As the number of gates increases, the proof time also increases, but due to the characteristics of Groth16, the proof size remains constant and gas cost is also kept constant.
+
+Unfortunately, representing a circuit like sha256 in SIEVE IR would require more than 7M constraints (it's close to $2^{23}$ ptau file) in the current implementation.This is not realistic for client-side use, which would take too long to prove.
