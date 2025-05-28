@@ -9,8 +9,8 @@ const INITIAL_BUFFER_CAPACITY: usize = 1024 * 1024; // 1MB initial capacity for 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkResult {
-    pub proof_generation_time_ms: u64,
-    pub proof_verification_time_ms: u64,
+    pub proof_generation_time_ns: u64,
+    pub proof_verification_time_ns: u64,
     pub proof_size_bytes: usize,
     pub communication_overhead_bytes: usize,
     pub prover_cpu_usage: f32,
@@ -32,11 +32,7 @@ pub struct MonitoringConfig {
 
 impl Default for MonitoringConfig {
     fn default() -> Self {
-        Self {
-            enabled: true,
-            refresh_interval_ms: 50,     // Reduced from 100ms
-            stabilization_delay_ms: 100, // Reduced from 200ms
-        }
+        Self { enabled: true, refresh_interval_ms: 50, stabilization_delay_ms: 100 }
     }
 }
 

@@ -55,7 +55,6 @@ pub fn serialize_and_save_proof(snark_proof: &GrothProof<Bn254>, output_path: &s
 
     // Write to file
     fs::write(output_path, &json)?;
-    println!("SNARK proof serialized to {}", output_path);
 
     Ok(())
 }

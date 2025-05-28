@@ -1,3 +1,4 @@
+use core::num;
 use std::{
     fs,
     io::Cursor,
@@ -49,7 +50,7 @@ fn e2e(c: &mut Criterion) {
         Some(monitoring_config),
     );
 }
-fn sha256_single(c: &mut Criterion) {
+fn _sha256_single(c: &mut Criterion) {
     let circuit_path = "circuits/sha256/single/circuit.txt";
     let private_path = "circuits/sha256/single/private.txt";
     let public_path = "circuits/sha256/single/public.txt";
@@ -70,7 +71,7 @@ fn sha256_single(c: &mut Criterion) {
     );
 }
 
-fn sha256_hash_chain_10(c: &mut Criterion) {
+fn _sha256_hash_chain_10(c: &mut Criterion) {
     let circuit_path = "circuits/sha256/hashchain/circuit.txt";
     let private_path = "circuits/sha256/hashchain/private.txt";
     let public_path = "circuits/sha256/hashchain/public.txt";
@@ -101,7 +102,7 @@ fn sha256_hash_chain_10(c: &mut Criterion) {
     }
 }
 
-fn keccak_f_single(c: &mut Criterion) {
+fn _keccak_f_single(c: &mut Criterion) {
     let circuit_path = "circuits/keccak_f/circuit.txt";
     let private_path = "circuits/keccak_f/private.txt";
     let public_path = "circuits/keccak_f/public.txt";
@@ -146,20 +147,7 @@ pub fn run_e2e_proof(
     let circuit_bytes_slice = circuit_bytes.as_slice();
 
     let private_input_path = Path::new(private_input_path_str);
-    assert!(
-        private_input_path.exists(),
-        "Private input file does not exist at {:?}",
-        private_input_path
-    );
-
     let public_input_path = Path::new(public_input_path_str);
-    assert!(
-        public_input_path.exists(),
-        "Public input file does not exist at {:?}",
-        public_input_path
-    );
-
-    println!("Running {} iterations for accurate measurements...", NUM_RUNS);
 
     // System stabilization before measuring
     if config.stabilization_delay_ms > 0 {
@@ -214,29 +202,18 @@ pub fn run_e2e_proof(
         total_proving_time += start.elapsed();
     }
 
-    // Calculate average proving time across all runs
     let prove_duration = total_proving_time / NUM_RUNS;
-    println!("Average proving time ({} runs): {:?}", NUM_RUNS, prove_duration);
 
     let (prover_cpu_usage, prover_mem_usage) = get_process_usage(&mut prover_system, &config);
-    println!("Prover CPU Usage: {:.2}%", prover_cpu_usage);
 
-    // Calculate proof size in bytes
     let proof_string = format!("{:?}", proof);
     let proof_size_bytes = proof_string.len();
-    println!("Proof size: {} bytes", proof_size_bytes);
-    // Calculate communication overhead (proof size plus public inputs and protocol overhead)
-    // Read public input file to calculate its size for communication overhead
-    // Read public input file once and reuse the content
+
     let public_input_content = read_file_cached(public_input_path).unwrap_or_else(|_| Vec::new());
     let public_input_size = public_input_content.len();
 
-    // Communication overhead includes the proof size and the public inputs
     let communication_overhead_bytes = proof_size_bytes + public_input_size;
 
-    println!("Communication overhead: {} bytes", communication_overhead_bytes);
-
-    // Allow system to stabilize before verification
     if config.stabilization_delay_ms > 0 {
         std::thread::sleep(std::time::Duration::from_millis(config.stabilization_delay_ms));
     }
@@ -271,20 +248,10 @@ pub fn run_e2e_proof(
     }
 
     let verify_duration = total_verification_time / NUM_RUNS;
-    println!("Average verification time ({} runs): {:?}", NUM_RUNS, verify_duration);
-
     let (verifier_cpu_usage, verifier_mem_usage) = get_process_usage(&mut verifier_system, &config);
-    println!("Verifier CPU Usage: {:.2}%", verifier_cpu_usage);
-
-    // ----- SNARK PROOF GENERATION MEASUREMENTS -----
-    println!("Generating SNARK proof from VOLE proof...");
-    let mut snark_system = init_system_monitoring(&config);
 
     // Create a constraint system for boolean conversions
     let cs = ConstraintSystem::<Bn254Fr>::new_ref();
-
-    // Measure SNARK proof generation time
-    let snark_start = Instant::now();
 
     // Build the circuit using boolean arrays
     let circuit = build_circuit(cs.clone(), proof.clone());
@@ -294,34 +261,24 @@ pub fn run_e2e_proof(
 
     let public_input = vec![];
 
+    // ----- SNARK PROOF GENERATION MEASUREMENTS -----
+    let mut snark_system = init_system_monitoring(&config);
+
+    let snark_start = Instant::now();
     let snark_proof =
         Groth16::prove(&pk, circuit.clone(), &mut rng).expect("Failed to generate SNARK proof");
     let snark_duration = snark_start.elapsed();
 
-    println!("SNARK proof generation time: {:?}", snark_duration);
-
-    // Verify the SNARK proof
-    let snark_verify_start = Instant::now();
     let is_valid =
         Groth16::verify(&vk, &public_input, &snark_proof).expect("Failed to verify SNARK proof");
-    let snark_verify_duration = snark_verify_start.elapsed();
 
-    println!(
-        "SNARK proof verification time: {:?}, result: {}",
-        snark_verify_duration,
-        if is_valid { "VALID" } else { "INVALID" }
-    );
+    println!("SNARK proof verification result: {}", if is_valid { "VALID" } else { "INVALID" });
 
-    // Calculate SNARK proof size
     let snark_proof_string = format!("{:?}", snark_proof);
     let snark_proof_size_bytes = snark_proof_string.len();
-    println!("SNARK proof size: {} bytes", snark_proof_size_bytes);
 
     let (snark_cpu_usage, snark_mem_usage) = get_process_usage(&mut snark_system, &config);
-    println!("SNARK CPU Usage: {:.2}%", snark_cpu_usage);
-    println!("SNARK Memory Usage: {:.2} MB", snark_mem_usage);
 
-    // Save the SNARK proof to the specified path
     if let Err(e) = std::fs::create_dir_all(Path::new(proof_output_path).parent().unwrap()) {
         println!("Warning: Failed to create directory for proof output: {}", e);
     }
@@ -342,8 +299,8 @@ pub fn run_e2e_proof(
     }
 
     BenchmarkResult {
-        proof_generation_time_ms: prove_duration.as_millis() as u64,
-        proof_verification_time_ms: verify_duration.as_millis() as u64,
+        proof_generation_time_ns: prove_duration.as_nanos() as u64,
+        proof_verification_time_ns: verify_duration.as_nanos() as u64,
         proof_size_bytes,
         communication_overhead_bytes,
         prover_cpu_usage,
@@ -381,13 +338,10 @@ pub fn run_e2e_benchmark(
     let circuit_bytes = read_file_cached(Path::new(circuit_path))
         .unwrap_or_else(|_| panic!("Failed to read circuit file at {}", circuit_path));
     let circuit_size = circuit_bytes.len();
-    println!("Circuit size: {} bytes", circuit_size);
 
     let mut group = c.benchmark_group(group_name);
     group.sample_size(10); // Run 10 times for Criterion measurements
     group.throughput(Throughput::Bytes(circuit_size as u64));
-
-    println!("Running detailed benchmark with 10 iterations...");
 
     // Use provided monitoring config or default
     let config = monitoring_config.unwrap_or_default();
@@ -400,7 +354,6 @@ pub fn run_e2e_benchmark(
         Some(config),
     );
 
-    println!("Running Criterion measurements for VOLE proof generation...");
     group.bench_function("vole_proof_generation_time", |b| {
         b.iter_custom(|iters| {
             let mut total_time = Duration::ZERO;
@@ -433,7 +386,6 @@ pub fn run_e2e_benchmark(
         });
     });
 
-    println!("Running Criterion measurements for VOLE verification...");
     group.bench_function("vole_proof_verification_time", |b| {
         b.iter_custom(|iters| {
             // Generate the proof once outside the timing loop - reuse cached circuit data
@@ -480,7 +432,6 @@ pub fn run_e2e_benchmark(
     });
 
     // Add SNARK proof generation benchmark
-    println!("Running Criterion measurements for SNARK proof generation...");
     group.bench_function("snark_proof_generation_time", |b| {
         b.iter_custom(|iters| {
             let mut total_time = Duration::ZERO;
@@ -504,13 +455,11 @@ pub fn run_e2e_benchmark(
                 )
                 .expect("Failed to generate VOLE proof");
 
-                // Create a constraint system for boolean conversions
                 let cs = ConstraintSystem::<Bn254Fr>::new_ref();
 
                 // Measure SNARK proof generation time
                 let start = Instant::now();
 
-                // Build the circuit using boolean arrays
                 let circuit = build_circuit(cs.clone(), vole_proof.clone());
 
                 let mut rng = ark_std::test_rng();
@@ -518,7 +467,6 @@ pub fn run_e2e_benchmark(
                     Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), &mut rng).unwrap();
 
                 let _public_input: Vec<Bn254Fr> = Vec::new();
-
                 let _snark_proof = Groth16::prove(&pk, circuit.clone(), &mut rng)
                     .expect("Failed to generate SNARK proof");
 
@@ -529,78 +477,79 @@ pub fn run_e2e_benchmark(
         });
     });
 
+    // if you need a solidity verifier, please open this comment out
     // Add SNARK proof verification benchmark
-    println!("Running Criterion measurements for SNARK proof verification...");
-    group.bench_function("snark_proof_verification_time", |b| {
-        b.iter_custom(|iters| {
-            // Generate a VOLE proof first
-            let circuit_bytes = read_file_cached(Path::new(circuit_path))
-                .unwrap_or_else(|_| panic!("Failed to read circuit file at {}", circuit_path));
-            let circuit_bytes_slice = circuit_bytes.as_slice();
+    // println!("Running Criterion measurements for SNARK proof verification...");
+    // group.bench_function("snark_proof_verification_time", |b| {
+    //     b.iter_custom(|iters| {
+    //         // Generate a VOLE proof first
+    //         let circuit_bytes = read_file_cached(Path::new(circuit_path))
+    //             .unwrap_or_else(|_| panic!("Failed to read circuit file at {}", circuit_path));
+    //         let circuit_bytes_slice = circuit_bytes.as_slice();
 
-            let circuit_buffer = create_buffer_with_capacity(circuit_bytes_slice);
-            let mut circuit = Cursor::new(circuit_buffer);
-            let mut transcript_instance = create_transcript_fn();
-            let rng = &mut thread_rng();
+    //         let circuit_buffer = create_buffer_with_capacity(circuit_bytes_slice);
+    //         let mut circuit = Cursor::new(circuit_buffer);
+    //         let mut transcript_instance = create_transcript_fn();
+    //         let rng = &mut thread_rng();
 
-            let vole_proof = Proof::<InsecureVole>::prove::<_, _>(
-                &mut circuit,
-                Path::new(private_path),
-                &mut transcript_instance,
-                rng,
-            )
-            .expect("Failed to generate VOLE proof");
+    //         let vole_proof = Proof::<InsecureVole>::prove::<_, _>(
+    //             &mut circuit,
+    //             Path::new(private_path),
+    //             &mut transcript_instance,
+    //             rng,
+    //         )
+    //         .expect("Failed to generate VOLE proof");
 
-            // Create a constraint system for boolean conversions
-            let cs = ConstraintSystem::<Bn254Fr>::new_ref();
+    //         // Create a constraint system for boolean conversions
+    //         let cs = ConstraintSystem::<Bn254Fr>::new_ref();
 
-            // Build the circuit using boolean arrays
-            let circuit = build_circuit(cs.clone(), vole_proof.clone());
+    //         // Build the circuit using boolean arrays
+    //         let circuit = build_circuit(cs.clone(), vole_proof.clone());
 
-            let mut rng = ark_std::test_rng();
-            let (pk, vk) =
-                Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), &mut rng).unwrap();
+    //         let mut rng = ark_std::test_rng();
+    //         let (pk, vk) =
+    //             Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), &mut rng).unwrap();
 
-            let solidity_verifier = Groth16::<Bn254>::export(&vk);
-            let output_dir = Path::new("foundry");
-            if !output_dir.exists() {
-                let _ = fs::create_dir_all(output_dir);
-            }
-            let output_path = output_dir.join("src/verifier.sol");
-            let _ = fs::write(&output_path, solidity_verifier);
-            println!("Solidity verifier generated at: {}", output_path.display());
+    //         let solidity_verifier = Groth16::<Bn254>::export(&vk);
+    //         let output_dir = Path::new("foundry");
+    //         if !output_dir.exists() {
+    //             let _ = fs::create_dir_all(output_dir);
+    //         }
+    //         let output_path = output_dir.join("src/verifier.sol");
+    //         let _ = fs::write(&output_path, solidity_verifier);
+    //         println!("Solidity verifier generated at: {}", output_path.display());
 
-            let public_input = vec![];
+    //         let public_input = vec![];
 
-            let snark_proof = Groth16::prove(&pk, circuit.clone(), &mut rng)
-                .expect("Failed to generate SNARK proof");
+    //         let snark_proof = Groth16::prove(&pk, circuit.clone(), &mut rng)
+    //             .expect("Failed to generate SNARK proof");
 
-            let mut total_time = Duration::ZERO;
+    //         let mut total_time = Duration::ZERO;
 
-            for _ in 0..iters {
-                // Measure SNARK proof verification time
-                let start = Instant::now();
-                let _ = Groth16::verify(&vk, &public_input, &snark_proof)
-                    .expect("Failed to verify SNARK proof");
-                total_time += start.elapsed();
-            }
+    //         for _ in 0..iters {
+    //             // Measure SNARK proof verification time
+    //             let start = Instant::now();
+    //             let _ = Groth16::verify(&vk, &public_input, &snark_proof)
+    //                 .expect("Failed to verify SNARK proof");
+    //             total_time += start.elapsed();
+    //         }
 
-            total_time
-        });
-    });
+    //         total_time
+    //     });
+    // });
 
     // --- Report comprehensive metrics ---
     println!("\n====== {} BENCHMARK RESULTS ======", group_name);
     println!("VOLE Proof Metrics:");
     println!(
         "  - Generation Time: {:?} ({} ms)",
-        Duration::from_millis(benchmark_result.proof_generation_time_ms),
-        benchmark_result.proof_generation_time_ms
+        Duration::from_nanos(benchmark_result.proof_generation_time_ns),
+        benchmark_result.proof_generation_time_ns / 1_000_000
     );
     println!(
         "  - Verification Time: {:?} ({} ms)",
-        Duration::from_millis(benchmark_result.proof_verification_time_ms),
-        benchmark_result.proof_verification_time_ms
+        Duration::from_nanos(benchmark_result.proof_verification_time_ns),
+        benchmark_result.proof_verification_time_ns / 1_000_000
     );
     println!("  - Proof Size: {} bytes", benchmark_result.proof_size_bytes);
     println!("  - Communication Overhead: {} bytes", benchmark_result.communication_overhead_bytes);
@@ -612,12 +561,11 @@ pub fn run_e2e_benchmark(
     println!("  - CPU Usage: {:.2}%", benchmark_result.verifier_cpu_usage);
     println!("  - Memory Usage: {:.2} MB", benchmark_result.verifier_memory_usage_mb);
     println!("SNARK Prover Computation Load:");
-    println!("  - SNARK CPU Usage: {:.2}%", benchmark_result.snark_cpu_usage);
-    println!("  - SNARK Memory Usage: {:.2} MB", benchmark_result.snark_memory_usage_mb);
     println!(
         "  - SNARK proof generation time: {} ms",
         benchmark_result.snark_proof_generation_time_ms
     );
+    println!("  - SNARK CPU Usage: {:.2}%", benchmark_result.snark_cpu_usage);
     println!("  - SNARK proof size: {} bytes", benchmark_result.snark_proof_size_bytes);
     group.finish();
 }
