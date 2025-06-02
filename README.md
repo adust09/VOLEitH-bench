@@ -8,7 +8,7 @@ VOLE-based ZK systems are typically designed for efficient prover but are not ye
 ## Measurement matrix
 
 This project measures the following items.
-Please check [[benches/README.md]] for the results.
+Please check [benches/README.md](https://github.com/adust09/VOLEitH-bench/blob/main/benches/README.md) for the results.
 
 | Metric                   | Description                                                                                 | Unit                | Example Measurement Method                                                                     |
 |--------------------------|---------------------------------------------------------------------------------------------|---------------------|-----------------------------------------------------------------------------------------------|
