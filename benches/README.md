@@ -4,9 +4,12 @@
 Before experimenting with SNARK Proof, we measured the efficiency of VOLE itH by conducting benchmarks on keccak_f and sha256.
 
 Machine specifications:Apple M1 with 16GB memory
+
 ```bash
 cargo bench --bench voleith
 ```
+
+> ⚠️This command is not work now, should be fixed
 
 | Metric                   | sha256        | keccak_f      |
 |--------------------------|---------------|---------------|
