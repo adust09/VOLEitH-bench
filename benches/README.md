@@ -31,7 +31,7 @@ Machine specifications:Apple M1 with 16GB memory
 cargo bench --bench e2e
 ```
 
-The Solidity file is generated automatically, but deployment and verification must be performed manually. For details, refer to [[/foundry/README.md]]. This is the E2E benchmark with 10 and 1000 boolean gates.
+The Solidity file is generated automatically, but deployment and verification must be performed manually. For details, refer to [/foundry/README.md](https://github.com/adust09/VOLEitH-bench/blob/main/foundry/README.md). This is the E2E benchmark with 10 and 1000 boolean gates.
 
 **VOLE phase Metrics**
 
