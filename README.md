@@ -44,21 +44,29 @@ cargo bench --bench voleith
 
 This is the E2E benchmark with 10 and 1000 boolean gates.
 
-| Metric | 10 boolean gate | 1000 boolean gate |
-|--------|-------|-------|
-| **VOLE phase Metrics** | | |
-| Generation Time | 0 ms (0 ns) | 1 ms (1 ms) |
-| Verification Time | 0 ms (0 ns) | 1 ms (1 ms) |
-| Proof Size | 22,387 bytes | 127,327 bytes |
-| Communication Overhead | 22,452 bytes | 127,392 bytes |
-| Circuit Size | 356 bytes | 30,876 bytes |
-| VOLE Prover Computation Load |0.03%, 12.22 MB |0.05%, 13.50 MB |
-| VOLE Verifier Computation Load |0.08%, 14.27 MB |0.08%, 16.36 MB |
-| **SNARK phase Metrics** | | |
-| SNARK Prover Computation Load |0.03%, 231.06% |0.09%, 1,008,38 MB |
-| Proof Generation Time | 135 ms | 9,744 ms |
-| Proof Size | 1,055 bytes | 1,055 bytes |
-| On-Chain Verification Gas Cost | 208,967 gas  | 208,967 gas	 |
+**VOLE phase Metrics**
+
+| Metric                         | 100 add gate    | 100 and gate    | 1000 add gate   | 1000 and gate    |
+| ------------------------------ | --------------- | --------------- | --------------- | ---------------- |
+| Proving Time                   | 279.012µs       | 476.5µs         | 790.062µs       | 1.649608ms       |
+| Verification Time              | 68.75µs         | 274.566µs       | 585.6µs         | 1.082441ms       |
+| Proof Size                     | 21,361 bytes    | 42,491 bytes    | 21,319<br>bytes | 233,175<br>bytes |
+| Communication Overhead         | 21,426 bytes    | 42,556 bytes    | 21,384 bytes    | 233,240 bytes    |
+| Circuit Size                   | 2,971 bytes     | 2,971 bytes     | 30,876 bytes    | 30,876 bytes     |
+| VOLE Prover Computation Load   | 0.07%, 13.27 MB | 0.05%, 12.88 MB | 0.05%, 13.09 MB | 0.03%, 13.67 MB  |
+| VOLE Verifier Computation Load | 0.04%, 15.19 MB | 0.10%, 14.94 MB | 0.05%, 15.53 MB | 0.04%, 16.22 MB  |
+
+**SNARK phase Metrics**
+
+| Metric                         | 100 add gate   | 100 and gate       | 1000 add gate  | 1000 and gate    |
+| ------------------------------ | -------------- | ------------------ | -------------- | ---------------- |
+| Proving Time                   | 272 ms         | 1,794 ms           | 324 ms         | 8,003 ms         |
+| SNARK Prover Computation Load  | 0.05%, 91.11MB | 0.04%, 2,873.20 MB | 0.03%, 88.75MB | 0.05%, 966,22 MB |
+| Number of constraints          | 86,080         | 3,471,680          | 86,080         | 33,942,080       |
+| Proof Size                     | 1,055 bytes    | 1,055 bytes        | 1,055 bytes    | 1,055 bytes      |
+| On-Chain Verification Gas Cost | 208,967 gas    | 208,967 gas        | 208,967 gas    | 208,967 gas      |
+
+
 
 As the number of gates increases, the proof time also increases, but due to the characteristics of Groth16, the proof size remains constant and gas cost is also kept constant.
 
