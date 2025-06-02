@@ -138,7 +138,7 @@ pub fn run_e2e_proof(
     // Use provided monitoring config or default
     let config = monitoring_config.unwrap_or_default();
     // Number of runs to average
-    const NUM_RUNS: u32 = 10;
+    const NUM_RUNS: u32 = 1;
 
     // Read circuit and input files efficiently
     let circuit_path = Path::new(circuit_path_str);
@@ -255,7 +255,6 @@ pub fn run_e2e_proof(
 
     // Build the circuit using boolean arrays
     let circuit = build_circuit(cs.clone(), proof.clone());
-
     let mut rng = ark_std::test_rng();
     let (pk, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), &mut rng).unwrap();
 
@@ -469,6 +468,7 @@ pub fn run_e2e_benchmark(
                 let _public_input: Vec<Bn254Fr> = Vec::new();
                 let _snark_proof = Groth16::prove(&pk, circuit.clone(), &mut rng)
                     .expect("Failed to generate SNARK proof");
+                println!("num_constraints:{:?}\n", cs.num_constraints());
 
                 total_time += start.elapsed();
             }

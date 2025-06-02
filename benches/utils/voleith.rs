@@ -48,7 +48,7 @@ static FILE_CACHE: Lazy<Mutex<HashMap<String, Vec<u8>>>> = Lazy::new(|| Mutex::n
 
 /// Read file contents efficiently, using cache when possible
 /// Returns file content as bytes
-pub fn _read_file_cached(path: &Path) -> Result<Vec<u8>, std::io::Error> {
+pub fn read_file_cached(path: &Path) -> Result<Vec<u8>, std::io::Error> {
     let path_str = path.to_string_lossy().to_string();
 
     // Try to get from cache first
@@ -98,10 +98,7 @@ pub fn init_system_monitoring(config: &MonitoringConfig) -> Option<System> {
 
 /// Get process resource usage from a System instance
 /// Note: cpu_usage() already returns the delta since last refresh
-pub fn _get_process_usage(
-    system_opt: &mut Option<System>,
-    config: &MonitoringConfig,
-) -> (f32, f64) {
+pub fn get_process_usage(system_opt: &mut Option<System>, config: &MonitoringConfig) -> (f32, f64) {
     // If monitoring is disabled, return zeros
     let Some(system) = system_opt else {
         return (0.0, 0.0);
