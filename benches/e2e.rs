@@ -477,66 +477,64 @@ pub fn run_e2e_benchmark(
         });
     });
 
-    // if you need a solidity verifier, please open this comment out
     // Add SNARK proof verification benchmark
-    // println!("Running Criterion measurements for SNARK proof verification...");
-    // group.bench_function("snark_proof_verification_time", |b| {
-    //     b.iter_custom(|iters| {
-    //         // Generate a VOLE proof first
-    //         let circuit_bytes = read_file_cached(Path::new(circuit_path))
-    //             .unwrap_or_else(|_| panic!("Failed to read circuit file at {}", circuit_path));
-    //         let circuit_bytes_slice = circuit_bytes.as_slice();
+    group.bench_function("snark_proof_verification_time", |b| {
+        b.iter_custom(|iters| {
+            // Generate a VOLE proof first
+            let circuit_bytes = read_file_cached(Path::new(circuit_path))
+                .unwrap_or_else(|_| panic!("Failed to read circuit file at {}", circuit_path));
+            let circuit_bytes_slice = circuit_bytes.as_slice();
 
-    //         let circuit_buffer = create_buffer_with_capacity(circuit_bytes_slice);
-    //         let mut circuit = Cursor::new(circuit_buffer);
-    //         let mut transcript_instance = create_transcript_fn();
-    //         let rng = &mut thread_rng();
+            let circuit_buffer = create_buffer_with_capacity(circuit_bytes_slice);
+            let mut circuit = Cursor::new(circuit_buffer);
+            let mut transcript_instance = create_transcript_fn();
+            let rng = &mut thread_rng();
 
-    //         let vole_proof = Proof::<InsecureVole>::prove::<_, _>(
-    //             &mut circuit,
-    //             Path::new(private_path),
-    //             &mut transcript_instance,
-    //             rng,
-    //         )
-    //         .expect("Failed to generate VOLE proof");
+            let vole_proof = Proof::<InsecureVole>::prove::<_, _>(
+                &mut circuit,
+                Path::new(private_path),
+                &mut transcript_instance,
+                rng,
+            )
+            .expect("Failed to generate VOLE proof");
 
-    //         // Create a constraint system for boolean conversions
-    //         let cs = ConstraintSystem::<Bn254Fr>::new_ref();
+            // Create a constraint system for boolean conversions
+            let cs = ConstraintSystem::<Bn254Fr>::new_ref();
 
-    //         // Build the circuit using boolean arrays
-    //         let circuit = build_circuit(cs.clone(), vole_proof.clone());
+            // Build the circuit using boolean arrays
+            let circuit = build_circuit(cs.clone(), vole_proof.clone());
 
-    //         let mut rng = ark_std::test_rng();
-    //         let (pk, vk) =
-    //             Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), &mut rng).unwrap();
+            let mut rng = ark_std::test_rng();
+            let (pk, vk) =
+                Groth16::<Bn254>::circuit_specific_setup(circuit.clone(), &mut rng).unwrap();
 
-    //         let solidity_verifier = Groth16::<Bn254>::export(&vk);
-    //         let output_dir = Path::new("foundry");
-    //         if !output_dir.exists() {
-    //             let _ = fs::create_dir_all(output_dir);
-    //         }
-    //         let output_path = output_dir.join("src/verifier.sol");
-    //         let _ = fs::write(&output_path, solidity_verifier);
-    //         println!("Solidity verifier generated at: {}", output_path.display());
+            let solidity_verifier = Groth16::<Bn254>::export(&vk);
+            let output_dir = Path::new("foundry");
+            if !output_dir.exists() {
+                let _ = fs::create_dir_all(output_dir);
+            }
+            let output_path = output_dir.join("src/verifier.sol");
+            let _ = fs::write(&output_path, solidity_verifier);
+            println!("Solidity verifier generated at: {}", output_path.display());
 
-    //         let public_input = vec![];
+            let public_input = vec![];
 
-    //         let snark_proof = Groth16::prove(&pk, circuit.clone(), &mut rng)
-    //             .expect("Failed to generate SNARK proof");
+            let snark_proof = Groth16::prove(&pk, circuit.clone(), &mut rng)
+                .expect("Failed to generate SNARK proof");
 
-    //         let mut total_time = Duration::ZERO;
+            let mut total_time = Duration::ZERO;
 
-    //         for _ in 0..iters {
-    //             // Measure SNARK proof verification time
-    //             let start = Instant::now();
-    //             let _ = Groth16::verify(&vk, &public_input, &snark_proof)
-    //                 .expect("Failed to verify SNARK proof");
-    //             total_time += start.elapsed();
-    //         }
+            for _ in 0..iters {
+                // Measure SNARK proof verification time
+                let start = Instant::now();
+                let _ = Groth16::verify(&vk, &public_input, &snark_proof)
+                    .expect("Failed to verify SNARK proof");
+                total_time += start.elapsed();
+            }
 
-    //         total_time
-    //     });
-    // });
+            total_time
+        });
+    });
 
     // --- Report comprehensive metrics ---
     println!("\n====== {} BENCHMARK RESULTS ======", group_name);

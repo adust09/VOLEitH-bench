@@ -6,6 +6,7 @@
         "hashchain",
         "kary",
         "keystream",
+        "nanos",
         "pdecom",
         "RCON",
         "SBOX",

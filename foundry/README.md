@@ -10,7 +10,7 @@ $ anvil
 
 2. Set your private key as an environment variable:
 
-Open another shell and run this script, you can find private key in anvil window.
+Open another shell and run this script, you can find private key in anvil window.private key whould appear in the anvil window when you start it in step 1.
 
 ```shell
 $ export PRIVATE_KEY=<your_private_key>
