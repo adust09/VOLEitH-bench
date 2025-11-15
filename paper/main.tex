@@ -1,0 +1,52 @@
+\documentclass[a4paper, 11pt]{article}
+
+% 日本語対応
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{graphicx} % 図の挿入
+\usepackage[hidelinks]{hyperref} % リンク（枠・色を非表示）
+\usepackage{url} % URL表示
+\usepackage{enumitem} % リストのカスタマイズ
+\usepackage{float} % 図表の配置制御
+
+% 日本語環境の設定 (必要に応じて変更)
+\usepackage[ipaex]{zxjafont} % XeLaTeX/LuaLaTeXの場合
+% \usepackage[utf8]{inputenc} % pdfLaTeXの場合
+% \usepackage[T1]{fontenc} % pdfLaTeXの場合
+% \usepackage[japanese]{babel} % pdfLaTeXの場合
+
+% タイトル、著者情報
+\title{VOLE-in-the-Headゼロ知識証明のオンチェーン検証における実現可能性とコスト分析}
+\author{著者名 \\ 所属機関}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+% アブストラクトのプレースホルダー
+本研究では、効率的な証明者計算を特徴とするVOLE-in-the-Head（VOLEitH）ゼロ知識証明の、パブリックブロックチェーン上での実用性を評価した。特に、オンチェーン検証に焦点を当て、証明生成から検証までのエンドツーエンド（E2E）プロセスにおける計算コスト、証明サイズ、そしてEthereum上でのガス代を詳細に測定・分析した。ベンチマークとして、標準的な暗号学的ハッシュ関数（SHA-256, Keccak-F）および基本的な論理ゲート回路を用いた。結果として、VOLEitHは既存のZKP実装（Circom）と比較して証明生成が最大15.5倍高速である一方、証明サイズが6000倍以上増大することが確認された。さらに、VOLEitHの証明をSNARKで圧縮することにより、証明サイズを1,055バイトに固定し、オンチェーン検証のガス代を約21万ガスに抑えられることを示した。本稿は、VOLEitHをオンチェーンアプリケーションへ適用する際の技術的なトレードオフを明らかにし、将来的なスケーラビリティ向上のための示唆を与える。
+\end{abstract}
+
+\newpage
+
+% 各セクションの読み込み
+\input{intro_background.tex}
+\input{benchmark_design.tex}
+\input{results_analysis.tex}
+\input{related_work.tex}
+\input{conclusion.tex}
+
+\newpage
+\section*{参考文献 (References)}
+\begin{thebibliography}{99}
+\bibitem{eprint:iacr:2023:681}
+Iden3.
+Circom: A Circuit Compiler for Zero-Knowledge Proofs.
+\textit{Cryptology ePrint Archive}, Paper 2023/681, 2023.
+\url{https://eprint.iacr.org/2023/681}.
+\end{thebibliography}
+
+\end{document}

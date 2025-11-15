@@ -35,3 +35,18 @@ benchmark_results/
 benchmark_results_chain/
 foundry/cache
 foundry/out
+
+# LaTeX build files
+paper/build/
+paper/*.aux
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.log
+paper/*.out
+paper/*.xdv
+paper/*.synctex.gz
+paper/*.toc
+paper/*.bbl
+paper/*.blg
+paper/*.bcf
+paper/*.run.xml
