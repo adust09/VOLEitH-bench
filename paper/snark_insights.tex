@@ -2,11 +2,11 @@
 VOLEitHの証明をGroth16で包むと、証明サイズと検証コストは一定になる一方で、R1CS制約数が急増する。本章では、制約数の内訳と、その主因であるField Mappingを整理する。
 
 \subsection{制約数の分解}
-`n` を拡張witnessの長さ（秘密入力数と乗算ゲート数の合計）とすると、全体の制約数は
+$n$ を拡張witnessの長さ（秘密入力数と乗算ゲート数の合計）とすると、全体の制約数は
 \begin{align*}
 16,640 \times n + 2,113,664
 \end{align*}
-と表せる。線形項に寄与するガジェットは表\ref{tab:linear_constraints}の通りであり、`compute_validation_aggregate`が支配的である。
+と表せる。線形項に寄与するガジェットは表\ref{tab:linear_constraints}の通りであり、\texttt{compute\_validation\_aggregate}が支配的である。
 
 \begin{table}[H]
     \centering
@@ -69,8 +69,8 @@ pub fn build_circuit(
 
 この変換により、もともと単一の体要素で表現できた計算が数百ビットのAND/XORに展開され、制約数が爆発的に増加する。
 
-\subsection{ANDゲートと`witness\_challenge`}
-特にANDゲートを検証する際には、`witness_challenge`と`masked_witness`の全ビットについてANDおよびXOR演算を行い、部分積を合成する必要がある。実装の核心は以下の通りであり、128ビット平方の積をBooleanレベルで計算するため、ANDゲート1つあたり$2^{14}$規模の制約が追加される。
+\subsection{ANDゲートと\texttt{witness\_challenge}}
+特にANDゲートを検証する際には、\texttt{witness\_challenge}と\texttt{masked\_witness}の全ビットについてANDおよびXOR演算を行い、部分積を合成する必要がある。実装の核心は以下の通りであり、128ビット平方の積をBooleanレベルで計算するため、ANDゲート1つあたり$2^{14}$規模の制約が追加される。
 
 \begin{verbatim}
 for (i, challenge_bit) in challenge.iter().enumerate() {
@@ -83,7 +83,7 @@ for (i, challenge_bit) in challenge.iter().enumerate() {
 }
 \end{verbatim}
 
-ADDゲートでは`witness_challenge`が不要なため制約数は一定だが、ANDゲートが増えるほど`compute_validation_aggregate`が繰り返し呼ばれ、SNARKフェーズ全体のボトルネックとなる。
+ADDゲートでは\texttt{witness\_challenge}が不要なため制約数は一定だが、ANDゲートが増えるほど\texttt{compute\_validation\_aggregate}が繰り返し呼ばれ、SNARKフェーズ全体のボトルネックとなる。
 
 \section{技術的ボトルネックと解決策}
 上記の分析から、Field MappingとGGM木再構成が制約爆発の主要因であることが分かる。本節では、これらを緩和するための具体的な研究方向を整理する。

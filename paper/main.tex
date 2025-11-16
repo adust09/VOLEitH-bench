@@ -25,15 +25,13 @@
 
 \maketitle
 
-\begin{abstract}
-% アブストラクトのプレースホルダー
-本研究では、効率的な証明者計算を特徴とするVOLE-in-the-Head（VOLEitH）ゼロ知識証明の、パブリックブロックチェーン上での実用性を評価した。特に、オンチェーン検証に焦点を当て、証明生成から検証までのエンドツーエンド（E2E）プロセスにおける計算コスト、証明サイズ、そしてEthereum上でのガス代を詳細に測定・分析した。ベンチマークとして、標準的な暗号学的ハッシュ関数（SHA-256, Keccak-F）および基本的な論理ゲート回路を用いた。結果として、VOLEitHは既存のZKP実装（Circom）と比較して証明生成が最大15.5倍高速である一方、証明サイズが6000倍以上増大することが確認された。さらに、VOLEitHの証明をSNARKで圧縮することにより、証明サイズを1,055バイトに固定し、オンチェーン検証のガス代を約21万ガスに抑えられることを示した。本稿は、VOLEitHをオンチェーンアプリケーションへ適用する際の技術的なトレードオフを明らかにし、将来的なスケーラビリティ向上のための示唆を与える。
-\end{abstract}
+\input{abstract.tex}
 
 \newpage
 
 % 各セクションの読み込み
 \input{intro_background.tex}
+\input{background.tex}
 \input{benchmark_design.tex}
 \input{results_analysis.tex}
 \input{snark_insights.tex}
