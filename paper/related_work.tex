@@ -1,18 +1,43 @@
 \section{関連研究 (Related Work)}
-本研究は、VOLEベースのゼロ知識証明をオンチェーンで実用化するための性能評価を行ったものである。本章では、他の主要なZKPシステム、VOLEベースZKPに関する先行研究、そしてオンチェーンZKP検証の取り組みと比較することで、本研究の位置付けを明確にする。
+VOLE-in-the-Head (VOLEitH)は\textbf{MPC-in-the-Head (MPCitH)}と\textbf{QuickSilver}という二つの先行研究パラダイムから多くの影響を受けている。
+本節では、それぞれの研究系譜とVOLEitHとの接続点を整理し、本研究の貢献を位置付ける。
 
-\subsection{他の主要なZKPシステムとの比較}
-現在、ZKPシステムには多様なアプローチが存在し、それぞれが異なるトレードオフを持つ。
+\subsection{MPC-in-the-Head (MPCitH) フレームワーク}
+MPCitHは、VOLEitHが改良を目指したZKPパラダイムであり、セキュア多人数計算のアイデアを識別スキームやZKPoKに転用する枠組みである。
+
+\subsubsection{起源と概念}
+Ishai、Kushilevitz、Ostrovsky、Sahaiが2007年に提案したMPCitH（Multi-Party Computation in the Head）は、証明者 $P$ が秘密の証拠 $x$ を複数パーティのシェア $[x]_1,\ldots,[x]_N$ に分割し、仮想的なMPCプロトコルを頭の中で実行するというアプローチである。
+検証者 $V$ は、ランダムに選んだパーティ $i^\*$ を除く全てのビューの開示を要求することで、証拠を知っていることを間接的に確認する。
+任意の一方向関数 $F: x \mapsto y$ に対して適用できる汎用性があり、耐量子署名を含む幅広い暗号プロトコル構築に利用されてきた。
+
+\subsubsection{耐量子署名への応用と限界}
+MPCitHパラダイムは、耐量子署名スキームにおける重要な構成要素として、多数の候補を生み出している。
 \begin{itemize}
-    \item \textbf{zk-STARKs}: STARKsは、透明性（Trusted Setupが不要）とポスト量子耐性を大きな特徴とする。証明生成は高速だが、証明サイズがSNARKsと比較して大きく（数十〜数百KB）、オンチェーン検証のガス代が高くなる傾向がある。本研究で用いたVOLEitHもLPN仮定に基づくことでポスト量子耐性を持つが、証明圧縮のためにSNARK（Trusted Setupが必要）と組み合わせている点で、純粋なSTARKsとは異なるアプローチを取っている。
-    \item \textbf{Plonk/Halo2}: これらのシステムは、Groth16のような特定の回路ごとにTrusted Setupを必要とするSNARKとは異なり、一度のTrusted Setup（Universal Trusted Setup）で様々な回路に再利用できるという利点を持つ。これにより開発の柔軟性が向上するが、一般的に証明サイズや検証コストはGroth16に比べて若干増加する。本研究では、検証コストの最小化を優先し、最も効率的なGroth16を圧縮に用いた。
-    \item \textbf{R1CSベースのSNARKs (例: Circom/Groth16)}: 本研究でも比較対象とした、現在最も広く使われているZKPシステムの一つ。証明サイズと検証コストが非常に小さいという強力な利点を持つが、証明者の計算負荷が高く、複雑な回路では証明生成に長い時間を要する。本研究のアーキテクチャは、この証明者側の計算負荷をVOLEitHで軽減しようとする試みと位置付けられる。
+    \item \textbf{Picnic} はMPCitHをベースにした代表的な署名スキームであり、NIST標準化候補として注目を集めた。
+    \item \textbf{対称鍵プリミティブ}（AES、LowMC、Rainなど）をコアに据えたMPCitHスキームが提案され、実装容易性と効率のバランスを模索している。
+    \item \textbf{追加PQC候補} として、AIMerやBiscuit、MIRA、MiRitH、MQOM、PERK、RYDE、SDitHなど、多数のMPCitH系署名が公募に提出された。
 \end{itemize}
+VOLEitHは、MPCitHに代わる手段として、よりシンプルかつ小さく高速な証明プロトコルを提供し、MPCitH系の証明者計算コストという限界を克服することを狙っている。
 
-\subsection{VOLEベースZKPに関する先行研究}
-VOLEベースのZKPは、その証明者効率の高さから近年活発に研究されている分野である。	exttt{soft\_spoken}の元となった論文をはじめ、	exttt{mozzarella}、	exttt{mac-n-cheese}といった多くの実装が提案されている。これらの研究の多くは、プロトコルの理論的な改善や、オフラインでの性能評価に焦点を当てている。本研究の新規性は、これらのVOLEベースZKP実装の一つである	exttt{soft\_spoken}を実際に用い、SNARKによる圧縮を経てオンチェーンで検証するまでのエンドツーエンドのプロセスを構築し、その具体的な性能とコストを実測した点にある。
+\subsubsection{VOLEitHが解決するMPCitHの課題}
+MPCitHでは「多数の仮想パーティのうち一部のみを開示して検証する」という構成上、Soundnessエラーを抑えるためにチャレンジ\&回答の繰り返し回数を増やす必要がある。
+Proof-of-Knowledge誤り $2^{-t}$ を達成するには$t$ラウンドのやり取りを必要とし、証明サイズは $O(t \cdot N)$ に膨らむ。
+また証明者は各ラウンドで複数パーティ分のビューを再計算するため、線形演算と一方向関数評価がボトルネックになる。
+VOLEitHは、QuickSilver由来のVOLE MACを使って乗算ゲート整合性を一括チェックすることで、MPCitHが抱えていた「多パーティ再現」「広帯域通信」といったオーバーヘッドを回路規模に線形なコストへ圧縮する。
+さらに、SoftSpokenOTに代表されるOTリダクションを介して、MPCitHで必須だったビュー整合性証明をVOLEベースの一括生成処理に置き換え、Fiat--Shamir変換後でも短い証明と高速な証明者性能を維持できる。
 
-\subsection{オンチェーンZKP検証に関する既存の取り組み}
-オンチェーンでのZKP検証は、ZKロールアップ（例: StarkNet, zkSync, Polygon zkEVM）によって大きな成功を収めている。これらのプロジェクトは、大量のトランザクションをオフチェーンで処理し、その正当性を単一のZKPでオンチェーン検証することで、ブロックチェーンのスケーラビリティを飛躍的に向上させた。これらの多くは、zk-STARKsやR1CSベースのSNARKsを利用している。
+\subsection{QuickSilver: VOLEベースZKPとの統合}
+VOLEitHは、Vector Oblivious Linear Evaluation (VOLE) にアクセスできるQuickSilver型のZKPシステムを取り込み、VOLE MACを準同型コミットメントとして扱うことで効率を引き出す。
 
-本研究のアプローチは、これらの大規模なロールアップとは異なり、個別のアプリケーションがクライアントサイドで生成した証明をオンチェーンで検証するような、より小規模で多様なユースケースを想定している。VOLEitHの高速な証明者性能は、Webブラウザやモバイルデバイスといったリソースが限られた環境でのZK機能の実装を可能にし、分散型IDやプライベート投票、オンチェーンゲームなど、新たなdAppsの領域を切り拓く可能性がある。本研究は、その実現に向けた第一歩となる具体的な性能データを提供するものである。
+\subsubsection{QuickSilverの構造と特徴}
+Yang、Sarkar、Weng、WangによるQuickSilverプロトコルは、VOLEハイブリッドモデルにおける対話型ZKPoKとして提案された。
+DittmerらのLine-Point Zero-Knowledgeパラダイムを基盤とし、任意の有限体上の算術回路に対して証明を構成する。
+VOLEから得られるタプル $(\mathbf{u}_i,\mathbf{v}_i,\mathbf{q}_i)$ は、グローバルキー $\mathbf{\Delta}$ の下で機能するメッセージ認証コードとなり、準同型性を活かして乗算制約 $\mathbf{w}_\alpha \cdot \mathbf{w}_\beta = \mathbf{w}_\gamma$ を効率的に検証する。
+これにより、指定検証者型のVOLEベースZKPが、軽量な検証コストで高いスループットを実現できる。
+
+\subsubsection{VOLEitH/FAESTへの取り込み}
+FAEST署名では、QuickSilverスタイルのプロトコル $\Pi_{2D\text{-Rep}}$ をFOT-$\bar{1}$ハイブリッドモデルに設定し、O2Cコンパイラを適用して非対話型議論 $\Pi_{\text{FAEST}}$ を得る。
+Fiat--Shamir変換を施すことでROM上の安全性が保証され、指定検証者向けだったVOLEプロトコルが公開検証可能なスキームへと昇華する。
+VOLEitHは、SoftSpokenOTに代表されるOTベースの技術を活用したコンパイラにより、QuickSilver系プロトコルの利点を維持しつつ証明者を高速化し、我々のオンチェーン検証アーキテクチャに適した形で統合している。
+todo: FAEST不要
+todo: VOLE自体の説明が必要
