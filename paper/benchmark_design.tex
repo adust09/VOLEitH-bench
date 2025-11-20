@@ -50,7 +50,7 @@
 \begin{itemize}
     \item \textbf{SHA256回路}:
     \begin{itemize}
-        \item 内容: \textbf{SHA-256} 。これらは暗号技術で広く利用される標準的なハッシュ関数であり、複雑な計算の代表例として用いた。
+        \item 内容: \textbf{SHA-256} 。これらは暗号技術で広く利用される標準的なハッシュ関数であり、複雑な計算の代表例として用いた。なお、本研究では標準的なハッシュ関数を評価対象としたが、近年ではPoseidonのようにSNARK証明系に特化して算術化を効率化したZKフレンドリーなハッシュ関数も提案されている\cite{poseidon}。
         \item 形式: これらの回路は、\href{https://github.com/GaloisInc/swanky/tree/dev/bristol-fashion/circuits}{Bristol Fashion}形式で記述されたものを、本研究で利用するVOLEitHライブラリに適した形式に変換して使用した。
         \item 目的: VOLEitHプロトコル単体の性能と、既存のZKP実装（Circom）との比較評価に用いる。
     \end{itemize}

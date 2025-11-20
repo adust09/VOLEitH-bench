@@ -7,10 +7,9 @@
 
 \subsection{VOLEベースZKPとVOLE-in-the-Head}
 この課題に対し、証明者の計算効率を大幅に向上させる新しいZKPの系統として、VOLE（Vector Oblivious Linear Evaluation）ベースのプロトコルが登場した。
-これらのプロトコルは、従来のSNARKsで主流であったR1CS（Rank-1 Constraint System）とは異なるアプローチを取り、特に証明者の計算負荷を軽減することに成功している。
-TODO: SNARKの説明を追加
+これらのプロトコルは、従来のSNARKs（Succinct Non-Interactive Argument of Knowledge）で主流であったR1CS（Rank-1 Constraint System）とは異なるアプローチを取り、特に証明者の計算負荷を軽減することに成功している。SNARKsは証明サイズが小さく検証が高速なためオンチェーン検証で広く利用されており、Groth16\cite{groth16}やPLONK\cite{plonk}のような多くの証明システムが提案されている。
 
-その中でもVOLE-in-the-Head (VOLE itH) は、VOLEベースの対話型プロトコルにFiat-Shamir変換を適用することで、誰でも検証可能な公開証明（publicly verifiable proof）を生成可能にした画期的な手法である。
+その中でもVOLE-in-the-Head (VOLE itH) は、VOLEベースの対話型プロトコルにFiat-Shamir変換を適用することで、誰でも検証可能な公開証明（publicly verifiable proof）を生成可能にした画期的な手法である\cite{voleith}。
 これにより、証明者側の高い計算効率という利点を維持しつつ、オンチェーン検証への道が拓かれた。
 
 \subsection{研究の目的と貢献}
@@ -30,8 +29,7 @@ VOLEitHは理論的には有望であるものの、その実用性、特にオ�
 VOLEitHの証明をオンチェーンで扱うために複数の手法を検討し、最終的にGroth16によるSNARK Wrappingを実装・評価した。本節では、その意思決定過程と主要な洞察を整理する。
 
 \subsection{SNARK Wrapping (Groth16)}
-最も直接的なアプローチは、VOLEitHの検証ロジック全体をGroth16で実装方法である。この手法により、回路規模やゲート種別に依らず証明サイズを\textbf{1,055バイト}、オンチェーン検証ガスを\textbf{208,967 gas}に固定できた。一方で、制約数は
-todo: snarkとgroth16,circomについて書く
+最も直接的なアプローチは、VOLEitHの検証ロジック全体をGroth16で実装方法である\cite{groth16}。この手法により、回路規模やゲート種別に依らず証明サイズを\textbf{1,055バイト}、オンチェーン検証ガスを\textbf{208,967 gas}に固定できた。本研究では、検証回路をCircom\cite{eprint:iacr:2023:681}を用いて記述し、Groth16\cite{groth16}で証明を生成した。一方で、制約数は
 \begin{align*}
 16,640 \times n + 2,113,664
 \end{align*}
