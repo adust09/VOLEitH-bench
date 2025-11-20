@@ -45,7 +45,8 @@ $n$ を拡張witnessの長さ（秘密入力数と乗算ゲート数の合計）
 \end{table}
 
 \subsection{Field Mappingがもたらす制約爆発}
-SchmivitzにおけるVOLEitHは、$\mathbb{F}_2$、$\mathbb{F}_{2^8}$、$\mathbb{F}_{2^{64}}$、$\mathbb{F}_{2^{128}}$といった2進拡大体上で計算を行う。一方で、Groth16のR1CSはBN254の素数体上で定義されるため、各ビット列をBoolean変数列に持ち上げる必要がある。実装では以下のように、証明内の各値を逐一Boolean配列に射影している。
+SchmivitzにおけるVOLEitHは、$\mathbb{F}_2$、$\mathbb{F}_{2^8}$、$\mathbb{F}_{2^{64}}$、$\mathbb{F}_{2^{128}}$といった2進拡大体上で計算を行う。
+一方で、Groth16のR1CSはBN254の素数体上で定義されるため、各ビット列をBoolean変数列に持ち上げる必要がある。実装では以下のように、証明内の各値を逐一Boolean配列に射影している。
 
 \begin{verbatim}
 pub fn build_circuit(
@@ -70,7 +71,8 @@ pub fn build_circuit(
 この変換により、もともと単一の体要素で表現できた計算が数百ビットのAND/XORに展開され、制約数が爆発的に増加する。
 
 \subsection{ANDゲートと\texttt{witness\_challenge}}
-特にANDゲートを検証する際には、\texttt{witness\_challenge}と\texttt{masked\_witness}の全ビットについてANDおよびXOR演算を行い、部分積を合成する必要がある。実装の核心は以下の通りであり、128ビット平方の積をBooleanレベルで計算するため、ANDゲート1つあたり$2^{14}$規模の制約が追加される。
+特にANDゲートを検証する際には、\texttt{witness\_challenge}と\texttt{masked\_witness}の全ビットについてANDおよびXOR演算を行い、部分積を合成する必要がある。
+実装の核心は以下の通りであり、128ビット平方の積をBooleanレベルで計算するため、ANDゲート1つあたり$2^{14}$規模の制約が追加される。
 
 \begin{verbatim}
 for (i, challenge_bit) in challenge.iter().enumerate() {
@@ -89,7 +91,9 @@ ADDゲートでは\texttt{witness\_challenge}が不要なため制約数は一�
 上記の分析から、Field MappingとGGM木再構成が制約爆発の主要因であることが分かる。本節では、これらを緩和するための具体的な研究方向を整理する。
 
 \subsection{Field Mapping最適化とLookup Table}
-Mystique\cite{eprint:2021:730}は、機械学習向けに$\mathbb{F}_2$と$\mathbb{F}_p$のデータ変換を効率化するVOLEベースZKであり、Lookup Table (LUT) を導入することでさらに高速化できることが最新研究\cite{eprint:2025:507}で示されている。表\ref{tab:mystique_lut}に示す通り、LUTを用いた場合には実行時間が61--130倍短縮し、通信量も最大2.9倍削減できる。VOLEitHのField MappingにMystique型LUTを適用できれば、SNARKフェーズの制約数削減に直結すると期待される。
+Mystique\cite{eprint:2021:730}は、機械学習向けに$\mathbb{F}_2$と$\mathbb{F}_p$のデータ変換を効率化するVOLEベースZKであり、Lookup Table (LUT) を導入することでさらに高速化できることが最新研究\cite{eprint:2025:507}で示されている。
+表\ref{tab:mystique_lut}に示す通り、LUTを用いた場合には実行時間が61--130倍短縮し、通信量も最大2.9倍削減できる。
+VOLEitHのField MappingにMystique型LUTを適用できれば、SNARKフェーズの制約数削減に直結すると期待される。
 
 \begin{table}[H]
     \centering
@@ -110,7 +114,9 @@ Mystique\cite{eprint:2021:730}は、機械学習向けに$\mathbb{F}_2$と$\math
 \end{table}
 
 \subsection{GGM木最適化とFolding}
-Schmivitzでは、VOLEitH検証で最もコストの高いGGM木再構成を簡略化しているが、SNARKで完全に検証する場合はこの部分が制約増大を引き起こす。著者らはGGM木を効率化する手法\cite{eprint:2024:490}に加え、FAESTを改良したFAESTERを提案しており、署名サイズと計算量をともに改善している（表\ref{tab:faester}）。本研究で検討したFoldingスキームとこれらの最適化を組み合わせれば、将来的にGGM木再構成部の制約数を抑制できる。
+Schmivitzでは、VOLEitH検証で最もコストの高いGGM木再構成を簡略化しているが、SNARKで完全に検証する場合はこの部分が制約増大を引き起こす。
+著者らはGGM木を効率化する手法\cite{eprint:2024:490}に加え、FAESTを改良したFAESTERを提案しており、署名サイズと計算量をともに改善している（表\ref{tab:faester}）。
+本研究で検討したFoldingスキームとこれらの最適化を組み合わせれば、将来的にGGM木再構成部の制約数を抑制できる。
 
 \begin{table}[H]
     \centering

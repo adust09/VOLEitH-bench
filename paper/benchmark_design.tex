@@ -3,15 +3,29 @@
 
 \subsection{測定項目}
 本研究では、証明システムの性能と実用性を多角的に評価するため、以下のメトリクスを測定対象とした。
-\begin{itemize}
-    \item \textbf{証明生成時間 (Proof Generation Time)}: 証明者が、ある計算に対する証明を生成するために要する時間。単位はミリ秒（ms）またはマイクロ秒（$\mu$s）。
-    \item \textbf{証明検証時間 (Proof Verification Time)}: 検証者が、与えられた証明の正当性を検証するために要する時間。単位はミリ秒（ms）またはマイクロ秒（$\mu$s）。
-    \item \textbf{証明サイズ (Proof Size)}: 生成された証明データの大きさ。単位はバイト（B）。
-    \item \textbf{通信オーバーヘッド (Communication Overhead)}: 非対話型証明において、証明者が検証者に送信する必要がある総データ量。基本的には証明サイズとほぼ同等となる。
-    \item \textbf{計算負荷 (Computation Load)}: 証明生成および検証プロセス中に消費されるCPU使用率（\%）と最大メモリ使用量（MB）。
-    \item \textbf{SNARK制約数 (Number of constraints)}: VOLEitHの証明をSNARKに変換する際に生成されるR1CSの制約数。SNARKの証明生成時間に大きく影響する。
-    \item \textbf{オンチェーン検証ガス代 (On-Chain Verification Gas Cost)}: 生成されたSNARK証明をEthereumのスマートコントラクトで検証する際に消費されるガス量。
-\end{itemize}
+\begin{table}[hbtp]
+    \centering
+    \begin{tabular}{|l|l|l|}
+        \hline
+        \textbf{メトリクス} & \textbf{説明} & \textbf{単位/備考} \\
+        \hline
+        証明生成時間 (Proof Generation Time) & 証明者が、ある計算に対する証明を生成するために要する時間 & ms または $\mu$s \\
+        \hline
+        証明検証時間 (Proof Verification Time) & 検証者が、与えられた証明の正当性を検証するために要する時間 & ms または $\mu$s \\
+        \hline
+        証明サイズ (Proof Size) & 生成された証明データの大きさ & バイト（B） \\
+        \hline
+        通信オーバーヘッド (Communication Overhead) & 非対話型証明において、証明者が検証者に送信する必要がある総データ量。基本的に証明サイズとほぼ同等 & バイト（B） \\
+        \hline
+        計算負荷 (Computation Load) & 証明生成および検証プロセス中に消費されるCPU使用率および最大メモリ使用量 & CPU使用率（\%）、メモリ（MB） \\
+        \hline
+        SNARK制約数 (Number of constraints) & VOLEitHの証明をSNARKに変換する際に生成されるR1CSの制約数。証明生成時間に大きく影響 & - \\
+        \hline
+        オンチェーン検証ガス代 (On-Chain Verification Gas Cost) & 生成されたSNARK証明をEthereumのスマートコントラクトで検証する際に消費されるガス量 & gas \\
+        \hline
+    \end{tabular}
+    \caption{ベンチマーク測定項目一覧}
+\end{table}
 
 \subsection{評価環境}
 すべてのベンチマークは、以下の統一された環境で実施した。
@@ -34,9 +48,9 @@
 \subsection{評価対象回路}
 本ベンチマークでは、プロトコルの基本的な性能と、より実践的な応用における性能の両方を評価するため、2種類の回路セットを用いた。
 \begin{itemize}
-    \item \textbf{大規模暗号回路}:
+    \item \textbf{SHA256回路}:
     \begin{itemize}
-        \item 内容: \textbf{SHA-256} および \textbf{Keccak-F}。これらは暗号技術で広く利用される標準的なハッシュ関数であり、複雑な計算の代表例として用いた。
+        \item 内容: \textbf{SHA-256} 。これらは暗号技術で広く利用される標準的なハッシュ関数であり、複雑な計算の代表例として用いた。
         \item 形式: これらの回路は、\href{https://github.com/GaloisInc/swanky/tree/dev/bristol-fashion/circuits}{Bristol Fashion}形式で記述されたものを、本研究で利用するVOLEitHライブラリに適した形式に変換して使用した。
         \item 目的: VOLEitHプロトコル単体の性能と、既存のZKP実装（Circom）との比較評価に用いる。
     \end{itemize}
