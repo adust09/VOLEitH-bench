@@ -1,8 +1,8 @@
 \section{前提知識と関連研究}
-本章では、後続のベンチマークと考察を理解するために必要な暗号学的前提を、数式レベルで簡潔に整理する。
-特に、VOLEによるMAC相関、MPC-in-the-Headの健全性構造、GGM木に基づくベクトルコミットメント、そしてVOLE-in-the-Head (VOLEitH) への写像を強調する。
+本章では、後続のベンチマークと考察を理解するために必要な暗号学的前提を、簡潔に整理する。
 
 \subsection{Vector Oblivious Linear Evaluation (VOLE)}
+VOLEは、二者間で線形関係を隠したままMAC相関を生成するプリミティブである。
 有限体 $F$ 上で、送信者はベクトル $\mathbf{u}, \mathbf{v} \in F^m$ を、受信者はグローバル鍵 $\mathbf{\Delta} \in F^m$ を入力とする。
 プロトコル終了後、受信者は
 \begin{equation}
@@ -17,6 +17,7 @@ FAESTなどでは、入力 $\mathbf{u}$ を $\mathbb{F}_2$ に制限しつつ、
 これはビット演算を保ちつつ、MACは大きな体で保持することで効率と安全性を両立するためである。
 
 \subsection{MPC-in-the-Head (MPCitH)}
+MPCitHは、NPリレーションの知識証明を「頭の中で」実行するMPCに還元し、ビュー開示で健全性を担保するZKフレームワークである。
 NPリレーション $R(x, w)$ に対し、証明者 $P$ は証人 $w$ を $N$ 份のシェア $w_i$ に分割し（加法秘密分散等）、$f(x, w_1,\dots,w_N)=R(x,\bigoplus_i w_i)$ を計算する半正直MPC $\Pi_f$ を頭の中でエミュレートする。
 識別プロトコルは次の4段階で構成される。
 \begin{enumerate}
@@ -28,7 +29,18 @@ NPリレーション $R(x, w)$ に対し、証明者 $P$ は証人 $w$ を $N$ �
 $\Pi_f$ が $(N-1)$-privacy を満たすとき、開示されなかった $V_{i^*}$ を偽造しない限り不正な $P$ は受理されないため、健全性が得られる。
 通信量は回路サイズ $s$ に線形（$O(s) + \mathrm{poly}(k,\log s)$）で、汎用性が高い。
 
-\subsection{VOLE-in-the-HeadとGGMベクトルコミットメント}
+\subsection{QuickSilver}
+QuickSilverは、VOLE MACの準同型性を用いて乗算制約を検査するLine-Point系ゼロ知識プロトコルであり、VOLE相関を前提に軽量な検証を実現する。
+QuickSilverはLine-Point Zero-Knowledgeパラダイムを用い、VOLE MACの加法準同型性で乗算制約 $w_\alpha \cdot w_\beta = w_\gamma$ を検査する。
+証明者は応答を $\tilde{a}_0,\tilde{a}_1,\tilde{b}$ にマスクし、検証者は VOLE 関係
+\begin{equation}
+    \tilde{b} = \tilde{a}_0 + \tilde{a}_1 \cdot \Delta
+\end{equation}
+が成立することを確認するだけで健全性を得る。
+VOLEitHは、このQuickSilver型の検査をGGMベースのVCと組み合わせ、公開検証を実現している。
+
+\subsection{VOLE-in-the-Head}
+VOLEitHは、MPC-in-the-Headの開示構造にQuickSilver型のVOLE検査を組み込み、指定検証者型VOLEを公開検証可能に拡張した手法である。
 VOLEitHは、MPCitHの「開示しない1パーティ」を、VOLEのグローバル鍵 $\mathbf{\Delta}$ に対応付けることで、指定検証者型のVOLE系プロトコルを公開検証可能にする。
 鍵となるのが、長さ倍増PRGから構成するGGM木に基づく All-but-One ベクトルコミットメント (VC) である。
 \begin{itemize}
@@ -37,15 +49,6 @@ VOLEitHは、MPCitHの「開示しない1パーティ」を、VOLEのグロー�
     \item 開示されない $r_{j^*}$ が $\mathbf{\Delta}$ に対応し、$V$ は公開された $r_i$ の線形結合から $\mathbf{q}=\mathbf{u}\circ\mathbf{\Delta}-\mathbf{v}$ を再構成する。
 \end{itemize}
 この構成により、OTを用いずに非対話でVOLE相関を生成し、MACのbinding性を保ったままFiat--Shamir変換を適用できる。
-
-\subsection{QuickSilverと乗算検証}
-QuickSilverはLine-Point Zero-Knowledgeパラダイムを用い、VOLE MACの加法準同型性で乗算制約 $w_\alpha \cdot w_\beta = w_\gamma$ を検査する。
-証明者は応答を $\tilde{a}_0,\tilde{a}_1,\tilde{b}$ にマスクし、検証者は VOLE 関係
-\begin{equation}
-    \tilde{b} = \tilde{a}_0 + \tilde{a}_1 \cdot \Delta
-\end{equation}
-が成立することを確認するだけで健全性を得る。
-VOLEitHは、このQuickSilver型の検査をGGMベースのVCと組み合わせ、公開検証を実現している。
 
 \subsection{SNARKとオンチェーン検証の概観}
 Groth16を例に、オンチェーン検証は (i) 証明と公開入力をcalldataで受領、(ii) 回路固有の検証鍵をコントラクトに格納、(iii) 公開入力とICベクトルのMSMで\(\mathrm{vk\_x}\)を計算、(iv) ペアリングprecompileで等式を判定、の4段階からなる。
