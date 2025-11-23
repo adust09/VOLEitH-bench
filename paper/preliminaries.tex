@@ -18,12 +18,6 @@ VOLE（Vector Oblivious Linear Evaluation）は、二者間（SenderとReceiver�
 基本的なVOLEプロトコルでは、Senderが持つアフィン変換 \texttt{f(x) = ax + b} と、Receiverが持つベクトル \texttt{u} に対し、Receiverが \texttt{v = au + b} を計算する。
 この過程で、Senderは \texttt{u} について、Receiverは \texttt{a, b} について何も知ることができない。
 
-VOLEベースのプロトコルの多くは、LPN（Learning Parity with Noise）仮定の困難性に基づいている。
-LPN仮定とは、ランダムな線形方程式系にノイズが加わったものから、元の線形関係を復元することが計算量的に困難であるという仮定であり、これにより量子コンピュータに対しても耐性を持つ（ポスト量子暗号）と考えられている。
-
-VOLEをZKPに応用するために、SPVOLE（Single-Point VOLE）やZP-VOLE（Zero-Point VOLE）といった派生プロトコルが考案された。
-これらは、特定の点でのみ値が非ゼロになるようなベクトルを効率的に扱うためのプロトコルであり、算術回路の各ゲートにおける制約を表現するのに適している。
-
 \subsection{VOLE-in-the-Head (VOLEitH)}
 VOLE-in-the-Head (VOLEitH) は、VOLEベースのプロトコルをZKPに昇華させた手法である。
 その基本的なアイデアは、証明したい算術回路のワイヤ値をProverがコミットし、Verifierがランダムな線形結合をチェックすることで、回路全体の計算が正しく行われたかを検証するというものである。
@@ -40,18 +34,6 @@ VOLE-in-the-Head (VOLEitH) は、VOLEベースのプロトコルをZKPに昇華�
 これは、Verifierが生成するランダムなチャレンジを、プロトコルのここまでの情報（コミットメント等）をハッシュ関数に入力することで自己生成するテクニックである。
 これにより、ProverはVerifierとの対話なしに証明を一方的に生成でき、生成された証明は誰でも検証可能なNIZKとなる。
 
-\subsection{SNARKとオンチェーン検証の概観}
-Groth16を例に、オンチェーン検証は以下の処理で構成される。(i) 証明と公開入力をcalldataとして受領する、(ii) 回路固有の検証鍵をコントラクトに格納する、(iii) 公開入力とICベクトルの多倍長加算（MSM）から\(\mathrm{vk\_x}\)を計算する、(iv) ペアリング用precompileを用いて等式成立を判定する。
-コストを支配する因子は次の通りである。第一に、ペアリングprecompileが扱える曲線はBN254（alt\_bn128）のみであり、安全性は約100ビットに制約される。第二に、ペアリング呼び出し（通常3回）がガスの大半を占め、1回あたり\(\sim\)34k gas（EIP-1108後）で15--20万gas規模の固定費となる。第三に、公開入力数に応じてMSMが線形に増加し、ガスも\(O(m)\)で伸びる。第四に、calldataの非ゼロバイトは16 gasで課金され、証明サイズ1055バイトの場合でも約1.7万gasを要する。さらに、デプロイ済みコードは24KBに制限されるため、大きな検証鍵を直列に埋め込む設計は困難である。
-
-\subsection{設計指針}
-\begin{itemize}
-    \item \textbf{証明サイズの固定性}: Groth16の証明サイズは一定であり（本稿では1055バイト）、回路規模が増加してもcalldata課金は増えない。
-    \item \textbf{公開入力の削減}: 公開入力数に比例してMSMコストが増えるため、ハッシュ圧縮等で項目数を最小化する。
-    \item \textbf{検証鍵の配置}: コントラクトサイズ上限を考慮し、検証鍵を別コントラクトに分離・共有するなどの構成が求められる。
-    \item \textbf{フィールド整合性}: 証明生成と検証はBN254に揃える必要があり、異なる曲線を用いる場合は専用プリコンパイルやロールアップ環境を前提とする。
-\end{itemize}
-
 \subsection{関連研究}
 VOLE-in-the-Head (VOLEitH)は\textbf{MPC-in-the-Head (MPCitH)}と\textbf{QuickSilver}という二つの研究パラダイムから多くの影響を受けている。
 以下では、それぞれの系譜とVOLEitHとの接続点を整理する。
@@ -63,15 +45,6 @@ MPCitHは、セキュア多人数計算のアイデアを識別スキームやZK
 Ishai、Kushilevitz、Ostrovsky、Sahaiが2007年に提案したMPCitH（Multi-Party Computation in the Head）は、証明者 $P$ が秘密の証拠 $x$ を複数パーティのシェア $[x]_1,\ldots,[x]_N$ に分割し、仮想的なMPCプロトコルを頭の中で実行するというアプローチである。
 検証者 $V$ は、ランダムに選んだパーティ $i^*$ を除く全てのビューの開示を要求することで、証拠を知っていることを間接的に確認する。
 任意の一方向関数 $F: x \mapsto y$ に対して適用できる汎用性があり、耐量子署名を含む幅広い暗号プロトコル構築に利用されてきた。
-
-\paragraph{耐量子署名への応用と限界}
-MPCitHパラダイムは、耐量子署名スキームにおける重要な構成要素として、多数の候補を生み出している。
-\begin{itemize}
-    \item \textbf{Picnic}: MPCitHをベースにした代表的な署名スキームであり、NIST標準化候補として注目を集めた。
-    \item \textbf{対称鍵プリミティブ}（AES、LowMC、Rainなど）をコアに据えたMPCitHスキームが提案され、実装容易性と効率のバランスを模索している。
-    \item \textbf{追加PQC候補}: AIMer、Biscuit、MIRA、MiRitH、MQOM、PERK、RYDE、SDitHなど、多数のMPCitH系署名が公募に提出された。
-\end{itemize}
-VOLEitHは、MPCitHに代わる手段として、よりシンプルかつ小さく高速な証明プロトコルを提供し、MPCitH系の証明者計算コストという限界を克服することを狙っている。
 
 \paragraph{VOLEitHが解決するMPCitHの課題}
 MPCitHではSoundnessエラーを抑えるためにチャレンジと回答の繰り返し回数を増やす必要があり、Proof-of-Knowledge誤り $2^{-t}$ を達成するには$t$ラウンドのやり取りを要し、証明サイズは $O(t \cdot N)$ に膨らむ。
@@ -88,7 +61,14 @@ DittmerらのLine-Point Zero-Knowledgeパラダイムを基盤とし、任意の
 VOLEから得られるタプル $(\mathbf{u}_i,\mathbf{v}_i,\mathbf{q}_i)$ は、グローバルキー $\mathbf{\Delta}$ の下で機能するメッセージ認証コードとなり、準同型性を活かして乗算制約 $\mathbf{w}_\alpha \cdot \mathbf{w}_\beta = \mathbf{w}_\gamma$ を効率的に検証する。
 これにより、指定検証者型のVOLEベースZKPが、軽量な検証コストで高いスループットを実現できる。
 
-\paragraph{VOLEitH/FAESTへの取り込み}
-FAEST署名では、QuickSilverスタイルのプロトコル $\Pi_{2D\text{-Rep}}$ をFOT-$\bar{1}$ハイブリッドモデルに設定し、O2Cコンパイラを適用して非対話型議論 $\Pi_{\text{FAEST}}$ を得る。
-Fiat--Shamir変換を施すことでROM上の安全性が保証され、指定検証者向けだったVOLEプロトコルが公開検証可能なスキームへと昇華する。
-VOLEitHは、SoftSpokenOTに代表されるOTベースの技術を活用したコンパイラにより、QuickSilver系プロトコルの利点を維持しつつ証明者を高速化し、オンチェーン検証アーキテクチャに適した形で統合している。
+\subsection{SNARKとオンチェーン検証の概観}
+Groth16を例に、オンチェーン検証は以下の処理で構成される。(i) 証明と公開入力をcalldataとして受領する、(ii) 回路固有の検証鍵をコントラクトに格納する、(iii) 公開入力とICベクトルの多倍長加算（MSM）から\(\mathrm{vk\_x}\)を計算する、(iv) ペアリング用precompileを用いて等式成立を判定する。
+コストを支配する因子は次の通りである。第一に、ペアリングprecompileが扱える曲線はBN254（alt\_bn128）のみであり、安全性は約100ビットに制約される。第二に、ペアリング呼び出し（通常3回）がガスの大半を占め、1回あたり\(\sim\)34k gas（EIP-1108後）で15--20万gas規模の固定費となる。第三に、公開入力数に応じてMSMが線形に増加し、ガスも\(O(m)\)で伸びる。第四に、calldataの非ゼロバイトは16 gasで課金され、証明サイズ1055バイトの場合でも約1.7万gasを要する。さらに、デプロイ済みコードは24KBに制限されるため、大きな検証鍵を直列に埋め込む設計は困難である。
+
+\subsection{設計指針}
+\begin{itemize}
+    \item \textbf{証明サイズの固定性}: Groth16の証明サイズは一定であり（本稿では1055バイト）、回路規模が増加してもcalldata課金は増えない。
+    \item \textbf{公開入力の削減}: 公開入力数に比例してMSMコストが増えるため、ハッシュ圧縮等で項目数を最小化する。
+    \item \textbf{検証鍵の配置}: コントラクトサイズ上限を考慮し、検証鍵を別コントラクトに分離・共有するなどの構成が求められる。
+    \item \textbf{フィールド整合性}: 証明生成と検証はBN254に揃える必要があり、異なる曲線を用いる場合は専用プリコンパイルやロールアップ環境を前提とする。
+\end{itemize}
