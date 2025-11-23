@@ -129,6 +129,145 @@ Keccak-FはSHA-256よりも複雑な回路構造を持つため、証明生成�
     \item 総証明時間はSNARKフェーズの制約増加に強く影響されるため、複雑な回路ではクライアントデバイスでの実行が難しくなる。
 \end{itemize}
 
+\subsection{SNARK統合に関する洞察}
+VOLEitHの証明をGroth16で包むと、証明サイズと検証コストは一定になる一方で、R1CS制約数が急増する。
+ここでは制約数の内訳と、制約爆発の要因および緩和策を整理する。
+
+\subsubsection{制約数の分解}
+$n$ を拡張witnessの長さ（秘密入力数と乗算ゲート数の合計）とすると、全体の制約数は
+\begin{align*}
+16,640 \times n + 2,113,664
+\end{align*}
+と表せる。線形項に寄与するガジェットは表\ref{tab:linear_constraints}の通りであり、\texttt{compute\_validation\_aggregate}が支配的である。
+
+\begin{table}[H]
+    \centering
+    \caption{線形に増加するガジェットの制約数}
+    \label{tab:linear_constraints}
+    \begin{tabular}{|l|r|}
+        \hline
+        ガジェット & 制約数 \\
+        \hline
+        $compute\_d\_delta$ & $128n$ \\
+        $compute\_masked\_witness$ & $256n$ \\
+        $compute\_validation\_aggregate$ & $16,512n$ \\
+        \hline
+        合計 & $\approx16,640n$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+また、回路サイズに依存しない定数項も無視できない（表\ref{tab:constant_constraints}）。乗算ゲートが増えると線形項が支配するが、ベースラインとして約200万制約が常に必要になる。
+
+\begin{table}[H]
+    \centering
+    \caption{定数項として加算されるガジェット}
+    \label{tab:constant_constraints}
+    \begin{tabular}{|l|r|}
+        \hline
+        ガジェット & 制約数 \\
+        \hline
+        $combine$ & $\sim2,097,152$ \\
+        $compute\_actual\_validation$ & $\sim16,384$ \\
+        最終整合性チェック & $\sim128$ \\
+        \hline
+        合計 & $\sim2,113,664$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsubsection{Field Mappingがもたらす制約爆発}
+SchmivitzにおけるVOLEitHは、$\mathbb{F}_2$、$\mathbb{F}_{2^8}$、$\mathbb{F}_{2^{64}}$、$\mathbb{F}_{2^{128}}$といった2進拡大体上で計算を行う。
+一方で、Groth16のR1CSはBN254の素数体上で定義されるため、各ビット列をBoolean変数列に持ち上げる必要がある。
+実装では以下のように、証明内の各値を逐一Boolean配列に射影している。
+
+\begin{verbatim}
+pub fn build_circuit(
+    cs: ConstraintSystemRef<Bn254Fr>,
+    proof: Proof<InsecureVole>,
+) -> VoleVerificationBoolean {
+    let witness_commitment_booleans: Vec<Vec<Boolean<Bn254Fr>>> = proof
+        .witness_commitment
+        .iter()
+        .map(|value| f64b_to_boolean_array(cs.clone(), value).unwrap())
+        .collect();
+
+    let witness_challenges_booleans: Vec<Vec<Boolean<Bn254Fr>>> = proof
+        .witness_challenges
+        .iter()
+        .map(|value| f128b_to_boolean_array(cs.clone(), value).unwrap())
+        .collect();
+    // ...
+}
+\end{verbatim}
+
+この変換により、もともと単一の体要素で表現できた計算が数百ビットのAND/XORに展開され、制約数が爆発的に増加する。
+
+\subsubsection{ANDゲートと\texttt{witness\_challenge}}
+特にANDゲートを検証する際には、\texttt{witness\_challenge}と\texttt{masked\_witness}の全ビットについてANDおよびXOR演算を行い、部分積を合成する必要がある。
+実装の核心は以下の通りであり、128ビット平方の積をBooleanレベルで計算するため、ANDゲート1つあたり$2^{14}$規模の制約が追加される。
+
+\begin{verbatim}
+for (i, challenge_bit) in challenge.iter().enumerate() {
+    if i >= 128 { break; }
+    for (j, masked_bit) in masked_witness.iter().enumerate() {
+        if j >= 128 || i + j >= 128 { continue; }
+        let and_result = Boolean::and(challenge_bit, masked_bit)?;
+        product[i + j] = Boolean::xor(&product[i + j], &and_result)?;
+    }
+}
+\end{verbatim}
+
+ADDゲートでは\texttt{witness\_challenge}が不要なため制約数は一定だが、ANDゲートが増えるほど\texttt{compute\_validation\_aggregate}が繰り返し呼ばれ、SNARKフェーズ全体のボトルネックとなる。
+
+\subsection{技術的ボトルネックと解決策}
+上記の分析から、Field MappingとGGM木再構成が制約爆発の主要因であることが分かる。
+本節では、これらを緩和するための具体的な研究方向を整理する。
+
+\subsubsection{Field Mapping最適化とLookup Table}
+Mystique\cite{eprint:2021:730}は、機械学習向けに$\mathbb{F}_2$と$\mathbb{F}_p$のデータ変換を効率化するVOLEベースZKであり、Lookup Table (LUT) を導入することでさらに高速化できることが最新研究\cite{eprint:2025:507}で示されている。
+表\ref{tab:mystique_lut}に示す通り、LUTを用いた場合には実行時間が61--130倍短縮し、通信量も最大2.9倍削減できる。
+VOLEitHのField MappingにMystique型LUTを適用できれば、SNARKフェーズの制約数削減に直結すると期待される。
+
+\begin{table}[H]
+    \centering
+    \caption{MystiqueとLUT拡張の性能比較}
+    \label{tab:mystique_lut}
+    \begin{tabular}{|l|l|r|r|}
+        \hline
+        関数 & プロトコル & 実行時間 (s) & 通信量 (MB) \\
+        \hline
+        指数関数 & Mystique with LUT & 8.696 & 99.020 \\
+                  & Mystique & 1130.020 & 291.435 \\
+        除算 & Mystique with LUT & 9.837 & 110.684 \\
+             & Mystique & 617.690 & 160.428 \\
+        逆平方根 & Mystique with LUT & 11.836 & 147.903 \\
+                 & Mystique & 824.639 & 212.211 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsubsection{GGM木最適化とFolding}
+Schmivitzでは、VOLEitH検証で最もコストの高いGGM木再構成を簡略化しているが、SNARKで完全に検証する場合はこの部分が制約増大を引き起こす。
+著者らはGGM木を効率化する手法\cite{eprint:2024:490}に加え、FAESTを改良したFAESTERを提案しており、署名サイズと計算量をともに改善している（表\ref{tab:faester}）。
+本研究で検討したFoldingスキームとこれらの最適化を組み合わせれば、将来的にGGM木再構成部の制約数を抑制できる。
+
+\begin{table}[H]
+    \centering
+    \caption{FAESTとFAESTERの比較（セキュリティ128ビット）}
+    \label{tab:faester}
+    \begin{tabular}{|l|l|r|r|r|}
+        \hline
+        スキーム & バージョン & 署名サイズ (B) & 署名時間 (ms) & 検証時間 (ms) \\
+        \hline
+        FAEST & Slow & 50,063 & 4.3813 & 4.1023 \\
+              & Fast & 63,363 & 0.4043 & 0.3953 \\
+        FAESTER & Slow & 45,943 & 3.2823 & 4.4673 \\
+                 & Fast & 60,523 & 0.4333 & 0.6103 \\
+        \hline
+    \end{tabular}
+\end{table}
+
 \subsection{総合考察とトレードオフ分析}
 これまでの分析結果を統合し、VOLEitHとSNARKを組み合わせたアーキテクチャ全体の有効性とトレードオフについて考察する。
 
