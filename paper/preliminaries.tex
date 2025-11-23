@@ -1,74 +1,61 @@
 \section{前提知識と関連研究}
-本章では、本稿で扱う暗号プロトコルとオンチェーン検証の前提、および関連研究を概観する。
-計算・ストレージ・データ転送に対して課金されるEthereum上での検証を念頭に、ゼロ知識証明、VOLE、SNARK、関連研究の流れをまとめる。
+本章では、後続のベンチマークと考察を理解するために必要な暗号学的前提を、数式レベルで簡潔に整理する。
+特に、VOLEによるMAC相関、MPC-in-the-Headの健全性構造、GGM木に基づくベクトルコミットメント、そしてVOLE-in-the-Head (VOLEitH) への写像を強調する。
 
-\subsection{ゼロ知識証明の基礎}
-ゼロ知識証明は、証明者が検証者に対し、ある表明が真であることを、その表明の真実性を担保する情報（witness）を一切明かすことなく納得させるためのプロトコルである。
-ZKPは以下の3つの性質を満たす必要がある。
+\subsection{Vector Oblivious Linear Evaluation (VOLE)}
+有限体 $F$ 上で、送信者はベクトル $\mathbf{u}, \mathbf{v} \in F^m$ を、受信者はグローバル鍵 $\mathbf{\Delta} \in F^m$ を入力とする。
+プロトコル終了後、受信者は
+\begin{equation}
+    \mathbf{q} = \mathbf{u} \circ \mathbf{\Delta} - \mathbf{v} \in F^m
+\end{equation}
+を満たすペア $(\mathbf{u}, \mathbf{q})$ を得る（$\circ$ は要素積）。
+$\mathbf{q}$ は $\mathbf{u}$ に対する情報理論的MACとなり、$\mathbf{\Delta}$ を知らずに $\mathbf{q}$ を固定したまま $\mathbf{u}$ を改ざんすることはできない（binding）。
+この性質が後述の健全性担保に直接利用される。
+
+\paragraph{サブフィールドVOLE}
+FAESTなどでは、入力 $\mathbf{u}$ を $\mathbb{F}_2$ に制限しつつ、$\mathbf{v}, \mathbf{q}, \mathbf{\Delta}$ を拡大体 $\mathbb{F}_{2^\lambda}$ 上に置くサブフィールドVOLEが用いられる。
+これはビット演算を保ちつつ、MACは大きな体で保持することで効率と安全性を両立するためである。
+
+\subsection{MPC-in-the-Head (MPCitH)}
+NPリレーション $R(x, w)$ に対し、証明者 $P$ は証人 $w$ を $N$ 份のシェア $w_i$ に分割し（加法秘密分散等）、$f(x, w_1,\dots,w_N)=R(x,\bigoplus_i w_i)$ を計算する半正直MPC $\Pi_f$ を頭の中でエミュレートする。
+識別プロトコルは次の4段階で構成される。
 \begin{enumerate}
-    \item \textbf{完全性 (Completeness)}: 証明者の表明が真であるならば、正直な証明者は正直な検証者を必ず納得させることができる。
-    \item \textbf{健全性 (Soundness)}: 証明者の表明が偽であるならば、不正な証明者が正直な検証者を騙して納得させられる確率は、無視できるほど小さい。
-    \item \textbf{ゼロ知識性 (Zero-Knowledge)}: 検証者は、証明の正当性以外には、証明者の持つ秘密情報について何も知ることができない。
+    \item \textbf{ビュー生成とコミット}: $\Pi_f$ の各仮想パーティのビュー $V_1,\dots,V_N$ にコミットする。
+    \item \textbf{チャレンジ}: 検証者 $V$ はインデックス $i^* \in \{1,\dots,N\}$ をランダムに選ぶ。
+    \item \textbf{開示}: $P$ は $i^*$ を除く $N-1$ 個のビューを開示する。
+    \item \textbf{検証}: $V$ は開示ビューの整合性と、$\Pi_f$ の実行規則への準拠を検査する。
 \end{enumerate}
-ZKPは、証明者と検証者の間で複数回のやり取りを必要とする「対話型証明システム」と、証明者が一度証明を公開すれば誰でも検証できる「非対話型証明システム（NIZK）」に大別される。
-オンチェーン検証のように、不特定多数の検証者が非同期に検証を行う環境では、NIZKが不可欠となる。
+$\Pi_f$ が $(N-1)$-privacy を満たすとき、開示されなかった $V_{i^*}$ を偽造しない限り不正な $P$ は受理されないため、健全性が得られる。
+通信量は回路サイズ $s$ に線形（$O(s) + \mathrm{poly}(k,\log s)$）で、汎用性が高い。
 
-\subsection{VOLE}
-VOLE（Vector Oblivious Linear Evaluation）は、二者間（SenderとReceiver）のセキュアな計算プロトコルであり、近年のZKPシステムの効率化に大きく貢献している。
-基本的なVOLEプロトコルでは、Senderが持つアフィン変換 \texttt{f(x) = ax + b} と、Receiverが持つベクトル \texttt{u} に対し、Receiverが \texttt{v = au + b} を計算する。
-この過程で、Senderは \texttt{u} について、Receiverは \texttt{a, b} について何も知ることができない。
+\subsection{VOLE-in-the-HeadとGGMベクトルコミットメント}
+VOLEitHは、MPCitHの「開示しない1パーティ」を、VOLEのグローバル鍵 $\mathbf{\Delta}$ に対応付けることで、指定検証者型のVOLE系プロトコルを公開検証可能にする。
+鍵となるのが、長さ倍増PRGから構成するGGM木に基づく All-but-One ベクトルコミットメント (VC) である。
+\begin{itemize}
+    \item 高さ $h=\log N$ のGGM木の根シードから $N$ 個の葉シード $sd_i$ を生成し、各葉にVOLE用の乱数列 $r_i$ を割り当てる。
+    \item 開示しないインデックス $j^*$ を除き、$P$ は各葉への経路で必要な兄弟ノードのシードを開示するだけで $N-1$ 個の $r_i$ を再現させられる（通信量は $O(\log N)$）。
+    \item 開示されない $r_{j^*}$ が $\mathbf{\Delta}$ に対応し、$V$ は公開された $r_i$ の線形結合から $\mathbf{q}=\mathbf{u}\circ\mathbf{\Delta}-\mathbf{v}$ を再構成する。
+\end{itemize}
+この構成により、OTを用いずに非対話でVOLE相関を生成し、MACのbinding性を保ったままFiat--Shamir変換を適用できる。
 
-\subsection{VOLE-in-the-Head (VOLEitH)}
-VOLE-in-the-Head (VOLEitH) は、VOLEベースのプロトコルをZKPに昇華させた手法である。
-その基本的なアイデアは、証明したい算術回路のワイヤ値をProverがコミットし、Verifierがランダムな線形結合をチェックすることで、回路全体の計算が正しく行われたかを検証するというものである。
-
-本研究で利用する\texttt{soft\_spoken}ライブラリは、VOLEitHの具体的な実装の一つである。
-\texttt{soft\_spoken}では、SPVOLEとZP-VOLEを巧みに組み合わせることで、効率的な証明生成を実現している。プロトコルの流れは以下のようになる。
-\begin{enumerate}
-    \item \textbf{コミットメント}: Proverは、算術回路の各ワイヤの値を表すベクトルにコミットする。
-    \item \textbf{チャレンジ}: Verifierは、ランダムなチャレンジ（乱数）をProverに送信する。
-    \item \textbf{レスポンス}: Proverは、チャレンジに基づき、コミットしたベクトル間の線形関係が成立することを示すための情報を計算し、Verifierに返信する。
-    \item \textbf{検証}: Verifierは、Proverからのレスポンスと自身が持つ情報を用いて、線形関係が成立するかをチェックする。もし成立すれば、Proverが回路を正しく計算したと確信する。
-\end{enumerate}
-この対話型のプロトコルを非対話的にするため、Fiat--Shamir変換が用いられる。
-これは、Verifierが生成するランダムなチャレンジを、プロトコルのここまでの情報（コミットメント等）をハッシュ関数に入力することで自己生成するテクニックである。
-これにより、ProverはVerifierとの対話なしに証明を一方的に生成でき、生成された証明は誰でも検証可能なNIZKとなる。
-
-\subsection{関連研究}
-VOLE-in-the-Head (VOLEitH)は\textbf{MPC-in-the-Head (MPCitH)}と\textbf{QuickSilver}という二つの研究パラダイムから多くの影響を受けている。
-以下では、それぞれの系譜とVOLEitHとの接続点を整理する。
-
-\subsubsection{MPC-in-the-Head (MPCitH) フレームワーク}
-MPCitHは、セキュア多人数計算のアイデアを識別スキームやZKPoKに転用する枠組みである。
-
-\paragraph{起源と概念}
-Ishai、Kushilevitz、Ostrovsky、Sahaiが2007年に提案したMPCitH（Multi-Party Computation in the Head）は、証明者 $P$ が秘密の証拠 $x$ を複数パーティのシェア $[x]_1,\ldots,[x]_N$ に分割し、仮想的なMPCプロトコルを頭の中で実行するというアプローチである。
-検証者 $V$ は、ランダムに選んだパーティ $i^*$ を除く全てのビューの開示を要求することで、証拠を知っていることを間接的に確認する。
-任意の一方向関数 $F: x \mapsto y$ に対して適用できる汎用性があり、耐量子署名を含む幅広い暗号プロトコル構築に利用されてきた。
-
-\paragraph{VOLEitHが解決するMPCitHの課題}
-MPCitHではSoundnessエラーを抑えるためにチャレンジと回答の繰り返し回数を増やす必要があり、Proof-of-Knowledge誤り $2^{-t}$ を達成するには$t$ラウンドのやり取りを要し、証明サイズは $O(t \cdot N)$ に膨らむ。
-また証明者は各ラウンドで複数パーティ分のビューを再計算するため、線形演算と一方向関数評価がボトルネックになる。
-VOLEitHは、QuickSilver由来のVOLE MACを使って乗算ゲート整合性を一括チェックすることで、MPCitHが抱えていた「多パーティ再現」「広帯域通信」といったオーバーヘッドを回路規模に線形なコストへ圧縮する。
-さらに、SoftSpokenOTに代表されるOTリダクションを介して、MPCitHで必須だったビュー整合性証明をVOLEベースの一括生成処理に置き換え、Fiat--Shamir変換後でも短い証明と高速な証明者性能を維持できる。
-
-\subsubsection{QuickSilver: VOLEベースZKPとの統合}
-VOLEitHは、Vector Oblivious Linear Evaluation (VOLE) にアクセスできるQuickSilver型のZKPシステムを取り込み、VOLE MACを準同型コミットメントとして扱うことで効率を引き出す。
-
-\paragraph{QuickSilverの構造と特徴}
-Yang、Sarkar、Weng、WangによるQuickSilverプロトコルは、VOLEハイブリッドモデルにおける対話型ZKPoKとして提案された。
-DittmerらのLine-Point Zero-Knowledgeパラダイムを基盤とし、任意の有限体上の算術回路に対して証明を構成する。
-VOLEから得られるタプル $(\mathbf{u}_i,\mathbf{v}_i,\mathbf{q}_i)$ は、グローバルキー $\mathbf{\Delta}$ の下で機能するメッセージ認証コードとなり、準同型性を活かして乗算制約 $\mathbf{w}_\alpha \cdot \mathbf{w}_\beta = \mathbf{w}_\gamma$ を効率的に検証する。
-これにより、指定検証者型のVOLEベースZKPが、軽量な検証コストで高いスループットを実現できる。
+\subsection{QuickSilverと乗算検証}
+QuickSilverはLine-Point Zero-Knowledgeパラダイムを用い、VOLE MACの加法準同型性で乗算制約 $w_\alpha \cdot w_\beta = w_\gamma$ を検査する。
+証明者は応答を $\tilde{a}_0,\tilde{a}_1,\tilde{b}$ にマスクし、検証者は VOLE 関係
+\begin{equation}
+    \tilde{b} = \tilde{a}_0 + \tilde{a}_1 \cdot \Delta
+\end{equation}
+が成立することを確認するだけで健全性を得る。
+VOLEitHは、このQuickSilver型の検査をGGMベースのVCと組み合わせ、公開検証を実現している。
 
 \subsection{SNARKとオンチェーン検証の概観}
-Groth16を例に、オンチェーン検証は以下の処理で構成される。(i) 証明と公開入力をcalldataとして受領する、(ii) 回路固有の検証鍵をコントラクトに格納する、(iii) 公開入力とICベクトルの多倍長加算（MSM）から\(\mathrm{vk\_x}\)を計算する、(iv) ペアリング用precompileを用いて等式成立を判定する。
-コストを支配する因子は次の通りである。第一に、ペアリングprecompileが扱える曲線はBN254（alt\_bn128）のみであり、安全性は約100ビットに制約される。第二に、ペアリング呼び出し（通常3回）がガスの大半を占め、1回あたり\(\sim\)34k gas（EIP-1108後）で15--20万gas規模の固定費となる。第三に、公開入力数に応じてMSMが線形に増加し、ガスも\(O(m)\)で伸びる。第四に、calldataの非ゼロバイトは16 gasで課金され、証明サイズ1055バイトの場合でも約1.7万gasを要する。さらに、デプロイ済みコードは24KBに制限されるため、大きな検証鍵を直列に埋め込む設計は困難である。
+Groth16を例に、オンチェーン検証は (i) 証明と公開入力をcalldataで受領、(ii) 回路固有の検証鍵をコントラクトに格納、(iii) 公開入力とICベクトルのMSMで\(\mathrm{vk\_x}\)を計算、(iv) ペアリングprecompileで等式を判定、の4段階からなる。
+ガスは主にペアリング（1回あたり\(\sim\)34k gas、合計15--20万gas規模）と公開入力数に比例するMSMで支配され、calldata課金は16 gas/非ゼロバイトで証明サイズ1055バイトなら約1.7万gasとなる。
+コードサイズは24KB上限のため検証鍵の配置も設計上の制約となる。
 
-\subsection{設計指針}
+\subsection{設計指針（本稿で用いる前提）}
 \begin{itemize}
-    \item \textbf{証明サイズの固定性}: Groth16の証明サイズは一定であり（本稿では1055バイト）、回路規模が増加してもcalldata課金は増えない。
-    \item \textbf{公開入力の削減}: 公開入力数に比例してMSMコストが増えるため、ハッシュ圧縮等で項目数を最小化する。
-    \item \textbf{検証鍵の配置}: コントラクトサイズ上限を考慮し、検証鍵を別コントラクトに分離・共有するなどの構成が求められる。
-    \item \textbf{フィールド整合性}: 証明生成と検証はBN254に揃える必要があり、異なる曲線を用いる場合は専用プリコンパイルやロールアップ環境を前提とする。
+    \item \textbf{証明サイズの固定性}: Groth16の証明サイズは一定（本稿では1055バイト）で、回路規模が増えてもcalldata課金は増えない。
+    \item \textbf{公開入力の削減}: MSMコストは公開入力数に線形。ハッシュ圧縮等で項目数を抑える。
+    \item \textbf{検証鍵の配置}: コントラクトサイズ上限を考慮し、検証鍵を分離・共有する設計をとる。
+    \item \textbf{フィールド整合性}: 証明生成・検証ともBN254を用いる。別曲線を選ぶ場合は専用プリコンパイルやロールアップを前提とする。
 \end{itemize}
