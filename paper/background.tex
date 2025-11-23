@@ -44,6 +44,19 @@ VOLEitHによって生成された証明は、証明者の計算効率は高い�
 SNARKの検証は、Ethereum Virtual Machine (EVM) 上でスマートコントラクトとして実装できる。検証コントラクトは、いくつかのペアリング演算と比較を行うだけで証明を検証できるため、計算量が比較的小さく、ガス代を低く抑えることが可能である。
 これにより、VOLEitHの巨大な証明をSNARKで圧縮し、そのコンパクトなSNARK証明をオンチェーンで検証するという、本研究のハイブリッドアーキテクチャが実現される。
 
+\subsection{SNARK Wrapping (Groth16)}
+最も直接的なアプローチは、VOLEitHの検証ロジック全体をGroth16で実装方法である\cite{groth16}。この手法により、回路規模やゲート種別に依らず証明サイズを\textbf{1,055バイト}、オンチェーン検証ガスを\textbf{208,967 gas}に固定できた。本研究では、検証回路をCircom\cite{eprint:iacr:2023:681}を用いて記述し、Groth16\cite{groth16}で証明を生成した。一方で、制約数は
+\begin{align*}
+16,640 \times n + 2,113,664
+\end{align*}
+と線形に増加し、特に非線形ゲートを多く含む回路では証明生成時間が急増する。実装は以下のコンポーネントで構成される。
+\begin{itemize}
+    \item \texttt{schmivitz-snark}: VOLEitH検証ロジックをarkworksベースのGroth16で証明するためのラッパー
+    \item \texttt{VOLEitH-bench}: Groth16圧縮後の証明をEVMで検証し、エンドツーエンド性能を測定するベンチマーク
+\end{itemize}
+SHA-256のようにANDゲートが2万個を超える回路では、この制約爆発によりSNARKフェーズの実装を断念せざるを得なかった。
+
+
 \subsection{信頼モデルと安全性仮定}
 TODO: CRSセットアップ、透明性、LPN系と楕円曲線系の安全性仮定を比較し、VOLEitHとSNARKの組み合わせが依存する前提を列挙する。
 
