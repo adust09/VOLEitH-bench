@@ -2,32 +2,38 @@
 本章では、後続のベンチマークと考察を理解するために必要な暗号学的前提を簡潔に整理する。
 
 \subsection{Vector Oblivious Linear Evaluation (VOLE)}
-VOLEは、二者間で線形関係を隠したままMAC相関を生成するプリミティブである。
-有限体 $F$ 上で、送信者はベクトル $\mathbf{u}, \mathbf{v} \in F^m$ を、受信者はグローバル鍵 $\mathbf{\Delta} \in F^m$ を入力とする。
-プロトコル終了後、受信者は
+Vector Oblivious Linear Evaluation（VOLE）は、二者間で線形関係を秘匿したまま、ある種の相関を生成するための暗号学的プリミティブである。
+$k$をセキュリティパラメータ、$\mathbb{F}_{2^k}$を要素数$2^k$の有限体とする。
+証明者（Prover）はベクトル$\mathbf{u} \in \mathbb{F}_2^\ell$と$\mathbf{v} \in \mathbb{F}_{2^k}^\ell$を、検証者（Verifier）はグローバルキー$\Delta \in \mathbb{F}_{2^k}$を入力とする。
+プロトコル終了後、検証者は$\mathbf{q} \in \mathbb{F}_{2^k}^\ell$を得て、証明者は$(\mathbf{u}, \mathbf{v})$を、検証者は$(\Delta, \mathbf{q})$を保持する。これらの値は以下のVOLE相関式を満たす。
 \begin{equation}
-    \mathbf{q} = \mathbf{u} \circ \mathbf{\Delta} - \mathbf{v} \in F^m
+    q_i = u_i \cdot \Delta + v_i \quad (i=0, \dots, \ell-1)
 \end{equation}
-を満たすペア $(\mathbf{u}, \mathbf{q})$ を得る（$\circ$ は要素積）。
-$\mathbf{q}$ は $\mathbf{u}$ に対する情報理論的MACとなり、$\mathbf{\Delta}$ を知らずに $\mathbf{q}$ を固定したまま $\mathbf{u}$ を改ざんすることはできない（binding）。
-この性質が後述の健全性担保に直接利用される。
-
-一般的に、入力 $\mathbf{u}$ を $\mathbb{F}_2$ に制限しつつ、$\mathbf{v}, \mathbf{q}, \mathbf{\Delta}$ を拡大体 $\mathbb{F}_{2^\lambda}$ 上に置くサブフィールドVOLEが用いられる。
-これはビット演算を保ちつつ、MACは大きな体で保持することで効率と安全性を両立するためである。
+この相関は、$u_i$に対する線形準同型コミットメントとして機能する。
+\begin{description}
+    \item[秘匿性 (Hiding)] 検証者は$q_i$から$u_i$の情報を得られない。これは、証明者が知るランダムな値$v_i$が$u_i$をマスクするためである。
+    \item[拘束性 (Binding)] 証明者は、コミットした$u_i$とは異なる値$u'_i$を開示することができない。これを行うには$\Delta$を推測する必要があるが、その成功確率は$2^{-k}$であり、計算論的に無視できる。
+\end{description}
 
 \subsection{VOLE-based ZK}
-todo
+VOLEの持つ線形性（加法準同型性）を利用することで、効率的なゼロ知識証明プロトコル（VOLE-based ZK）を構築できる。
+このパラダイムに基づく代表的なプロトコルとしてQuickSilverがある。
+VOLEベースの証明は、事前にVOLE相関をバッチ生成（pre-processing）しておき、オンラインフェーズでは軽い計算のみで証明を生成できるため、証明者・検証者ともに非常に高速である。
+
+しかし、従来のVOLE-ZKプロトコルは、その健全性（Soundness）を保証するために、検証者がグローバルキー$\Delta$の値を秘密に保つ必要があった。
+このため、証明を検証できるのが特定の検証者に限定される\textbf{指定検証者証明（Designated Verifier Proof）}となり、第三者が検証できる\textbf{公開検証可能性（Public Verifiability）}を持たないという課題があった。
 
 \subsection{VOLE-in-the-Head}
-VOLEitHは、MPC-in-the-Headの開示構造にQuickSilver型のVOLE検査を組み込み、指定検証者型VOLEを公開検証可能に拡張した手法である。
-VOLEitHは、MPCitHの「開示しない1パーティ」を、VOLEのグローバル鍵 $\mathbf{\Delta}$ に対応付けることで、指定検証者型のVOLE系プロトコルを公開検証可能にする。
-鍵となるのが、長さ倍増PRGから構成するGGM treeに基づく All-but-One Vector Commitmentである。
-\begin{itemize}
-    \item 高さ $h=\log N$ のGGM木の根シードから $N$ 個の葉シード $sd_i$ を生成し、各葉にVOLE用の乱数列 $r_i$ を割り当てる。
-    \item 開示しないインデックス $j^*$ を除き、$P$ は各葉への経路で必要な兄弟ノードのシードを開示するだけで $N-1$ 個の $r_i$ を再現させられる（通信量は $O(\log N)$）。
-    \item 開示されない $r_{j^*}$ が $\mathbf{\Delta}$ に対応し、$V$ は公開された $r_i$ の線形結合から $\mathbf{q}=\mathbf{u}\circ\mathbf{\Delta}-\mathbf{v}$ を再構成する。
-\end{itemize}
-この構成により、OTを用いずに非対話でVOLE相関を生成し、MACのbinding性を保ったままFiat--Shamir変換を適用できる。
+VOLE-in-the-Head（VOLEitH）は、上記のような指定検証者型のVOLE-ZKプロトコルを、非対話かつ公開検証可能なゼロ知識証明（NIZK）に変換するためのコンパイラである。
+VOLEitHは、MPC-in-the-HeadパラダイムとVOLEを組み合わせたもので、証明の健全性を単一の証明者の計算能力に帰着させる。
+
+VOLEitHの核となるアイデアは、検証者が秘密情報（$\Delta$）を持つ代わりに、証明者自身がコミットし、後からFiat-Shamir変換によって$\Delta$を導出する点にある。
+\begin{enumerate}
+    \item \textbf{コミットメント}: 証明者は、VOLE相関の元となるシード（seed）のベクトルにコミットする。このコミットメントには、GGMツリー（擬似乱数生成器を再帰的に適用する構成）に基づく\textbf{All-but-One ベクトルコミットメント}が用いられ、単一のハッシュ値で多数のシードをコミットできる。
+    \item \textbf{チャレンジ生成}: 証明の主要部分が生成された後、Fiat-Shamir変換を用いて、証明全体のトランスクリプトからチャレンジとしてグローバルキー$\Delta$が導出される。$\Delta$が事前にわかると拘束性が破られるため、この「遅延」が重要である。
+    \item \textbf{開示と検証}: $\Delta$が定まった後、証明者はコミットメントを開示する。All-but-Oneコミットメントの性質により、$N$個のシードのうち$N-1$個を$O(\log N)$の通信量で開示できる。開示されなかった1つのシードに対応する部分が、VOLEにおける$\Delta$の役割を果たす。
+\end{enumerate}
+検証者は、開示された情報と自身で計算した$\Delta$を用いてVOLE相関式を検証する。これにより、検証者が事前に秘密を共有することなく、誰でも証明を検証できる公開検証可能性が実現される。
 
 \subsection{Groth16}
 Groth16は、現在最も広く利用されているzk-SNARKsの一つであり、特にその証明サイズの小ささと検証の速さで知られている。
