@@ -7,7 +7,8 @@
 
 \subsection{VOLEベースZKPとVOLE-in-the-Head}
 この課題に対し、証明者の計算効率を大幅に向上させる新しいZKPの系統として、VOLE（Vector Oblivious Linear Evaluation）ベースのプロトコルが登場した。
-これらのプロトコルは、従来のSNARKs（Succinct Non-Interactive Argument of Knowledge）で主流であったR1CS（Rank-1 Constraint System）とは異なるアプローチを取り、特に証明者の計算負荷を軽減することに成功している。SNARKsは証明サイズが小さく検証が高速なためオンチェーン検証で広く利用されており、Groth16\cite{groth16}やPLONK\cite{plonk}のような多くの証明システムが提案されている。
+これらのプロトコルは、従来のSNARKs（Succinct Non-Interactive Argument of Knowledge）で主流であったR1CS（Rank-1 Constraint System）とは異なるアプローチを取り、特に証明者の計算負荷を軽減することに成功している。
+SNARKsは証明サイズが小さく検証が高速なためオンチェーン検証で広く利用されており、Groth16\cite{groth16}やPLONK\cite{plonk}のような多くの証明システムが提案されている。
 
 その中でもVOLE-in-the-Head (VOLE itH) は、VOLEベースの対話型プロトコルにFiat-Shamir変換を適用することで、誰でも検証可能な公開証明（publicly verifiable proof）を生成可能にした画期的な手法である\cite{voleith}。
 これにより、証明者側の高い計算効率という利点を維持しつつ、オンチェーン検証への道が拓かれた。
