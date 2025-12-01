@@ -2,6 +2,8 @@
 本章では、後続のベンチマークと考察を理解するために必要な暗号学的前提を簡潔に整理する。
 
 \subsection{Vector Oblivious Linear Evaluation (VOLE)}
+todo: VOLEはOblivious Transferをベースにしていることを明記し、説明を補強する。
+todo: 加法と乗法の計算過程を詳細に説明する。また、加法についてコストがからないことを明記する。
 Vector Oblivious Linear Evaluation（VOLE）は、二者間で線形関係を秘匿したまま、ある種の相関を生成するための暗号学的プリミティブである。
 $k$をセキュリティパラメータ、$\mathbb{F}_{2^k}$を要素数$2^k$の有限体とする。
 証明者（Prover）はベクトル$\mathbf{u} \in \mathbb{F}_2^\ell$と$\mathbf{v} \in \mathbb{F}_{2^k}^\ell$を、検証者（Verifier）はグローバルキー$\Delta \in \mathbb{F}_{2^k}$を入力とする。
@@ -16,6 +18,7 @@ $k$をセキュリティパラメータ、$\mathbb{F}_{2^k}$を要素数$2^k$の
 \end{description}
 
 \subsection{VOLE-based ZK}
+todo: VOLE-based ZKの説明を補強する。
 VOLEの持つ線形性（加法準同型性）を利用することで、効率的なゼロ知識証明プロトコル（VOLE-based ZK）を構築できる。
 このパラダイムに基づく代表的なプロトコルとしてQuickSilver\cite{quicksilver}がある。
 VOLEベースの証明は、事前にVOLE相関をバッチ生成（pre-processing）しておき、オンラインフェーズでは軽い計算のみで証明を生成できるため、証明者・検証者ともに非常に高速である。
@@ -24,6 +27,7 @@ VOLEベースの証明は、事前にVOLE相関をバッチ生成（pre-processi
 このため、証明を検証できるのが特定の検証者に限定される\textbf{指定検証者証明（Designated Verifier Proof）}となり、第三者が検証できる\textbf{公開検証可能性（Public Verifiability）}を持たないという課題があった。
 
 \subsection{VOLE-in-the-Head}
+todo: VOLEitHの説明を補強する。
 VOLE-in-the-Head（VOLEitH）は、上記のような指定検証者型のVOLE-ZKプロトコルを、非対話かつ公開検証可能なゼロ知識証明（NIZK）に変換するためのコンパイラである。本研究では、このVOLEitHの具体的な実装として、Rustで記述されたライブラリであるSchmivitz\cite{schmivitz}を利用している。
 VOLEitHは、MPC-in-the-HeadパラダイムとVOLEを組み合わせたもので、証明の健全性を単一の証明者の計算能力に帰着させる。
 
