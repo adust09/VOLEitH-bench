@@ -1,6 +1,37 @@
 \section{ベンチマーク設計}
 本章では、VOLEitHとSNARKを組み合わせたアーキテクチャの性能を定量的に評価するために設計したベンチマークの詳細について述べる。
 
+\subsection{提案アーキテクチャ：VOLEitH証明のSNARKによる圧縮}
+\label{subsec:our_approach}
+本研究で評価するアーキテクチャは、VOLE-in-the-Head（VOLEitH）が生成する巨大な証明サイズの問題を解決し、オンチェーン検証に適した形式に圧縮することを目的としている。
+このため、証明者効率に優れたVOLEitHと、証明の簡潔性および検証効率に優れたzk-SNARK（本研究ではGroth16\cite{groth16}を採用）を組み合わせたハイブリッドアプローチを採用する。
+このアーキテクチャの究極的な目的は、VOLEitHの利点である「クライアントサイドでの高速な証明生成」と、SNARKの利点である「低コストなオンチェーン検証」を両立させることにある。
+
+証明者が最終的なオンチェーン検証用の証明を生成するまでのプロセスは、以下の4つのステップで構成される。
+
+\begin{enumerate}
+    \item \textbf{ステップ1：VOLEitH証明の生成}
+    まず、証明者は与えられた計算（算術回路）に対し、VOLEitHプロトコルを用いて証明\(\pi_{\text{VOLEitH}}\)を生成する。
+    このプロセスは、対称鍵暗号ベースの軽い計算で構成されるため非常に高速だが、生成される証明\(\pi_{\text{VOLEitH}}\)のサイズは数MBオーダーと非常に大きい。
+
+    \item \textbf{ステップ2：VOLEitH検証回路のR1CS化}
+    次に、ステップ1で生成された\(\pi_{\text{VOLEitH}}\)の正当性を検証するアルゴリズム自体を、一つの計算と見なす。
+    この検証ロジックを、SNARKが扱うことができる形式であるR1CS（Rank-1 Constraint System）の算術回路として表現する。
+    この「検証回路」は、\(\pi_{\text{VOLEitH}}\)を入力として受け取り、それが有効であれば真を、無効であれば偽を出力する。
+
+    \item \textbf{ステップ3：SNARK証明の生成}
+    証明者は、ステップ2で構築した「VOLEitH検証回路」に対して、Groth16プロトコルを用いて証明\(\pi_{\text{SNARK}}\)を生成する。
+    この\(\pi_{\text{SNARK}}\)は、「ある有効な\(\pi_{\text{VOLEitH}}\)を知っており、それに対する検証計算が正しく実行された」という事実を証明するものである。
+    Groth16の特性により、\(\pi_{\text{SNARK}}\)は回路の複雑さに関わらず一定の小さなサイズ（約1KB）となる。
+
+    \item \textbf{ステップ4：オンチェーン検証}
+    最終的に、コンパクトなSNARK証明\(\pi_{\text{SNARK}}\)と、計算の公開入力のみがEthereum上の検証者スマートコントラクトに送信される。
+    スマートコントラクトは、事前にデプロイされた検証鍵を用いて\(\pi_{\text{SNARK}}\)を検証する。この検証は、数回のペアリング演算で完了するため、極めて少ないガス代で実行可能である。
+\end{enumerate}
+
+この一連のプロセスにより、クライアント側では証明生成の大部分を軽量なVOLEitHプロトコルが担い、ブロックチェーン側では検証コストの高い計算がコンパクトなSNARK証明の検証に置き換えられる。
+本研究では、このアーキテクチャをRust言語で実装した。VOLEitHの実装には\texttt{schmivitz}ライブラリを、SNARK回路の構築と証明生成には\texttt{arkworks}エコシステムを利用し、オンチェーン検証用のSolidityコントラクトは\texttt{ark-groth16}の機能を用いて生成した。
+
 \subsection{測定項目}
 本研究では、証明システムの性能と実用性を多角的に評価するため、以下のメトリクスを測定対象とした。
 \begin{table}[hbtp]
@@ -38,10 +69,7 @@
     \item \textbf{ソフトウェア}:
     \begin{itemize}
         \item 言語: Rust
-        \item ベンチマークツール: \texttt{cargo bench}
-        \item VOLEitH実装: \texttt{soft\_spoken} ライブラリ
-        \item スマートコントラクト開発・テスト: Foundryフレームワーク
-        \item Solidityバージョン: 0.8.20
+        \item VOLEitH実装: \texttt{schmivitz} ライブラリ
     \end{itemize}
 \end{itemize}
 

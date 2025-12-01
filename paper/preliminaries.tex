@@ -24,7 +24,7 @@ VOLEベースの証明は、事前にVOLE相関をバッチ生成（pre-processi
 このため、証明を検証できるのが特定の検証者に限定される\textbf{指定検証者証明（Designated Verifier Proof）}となり、第三者が検証できる\textbf{公開検証可能性（Public Verifiability）}を持たないという課題があった。
 
 \subsection{VOLE-in-the-Head}
-VOLE-in-the-Head（VOLEitH）は、上記のような指定検証者型のVOLE-ZKプロトコルを、非対話かつ公開検証可能なゼロ知識証明（NIZK）に変換するためのコンパイラである。
+VOLE-in-the-Head（VOLEitH）は、上記のような指定検証者型のVOLE-ZKプロトコルを、非対話かつ公開検証可能なゼロ知識証明（NIZK）に変換するためのコンパイラである。本研究では、このVOLEitHの具体的な実装として、Rustで記述されたライブラリであるSchmivitz\cite{schmivitz}を利用している。
 VOLEitHは、MPC-in-the-HeadパラダイムとVOLEを組み合わせたもので、証明の健全性を単一の証明者の計算能力に帰着させる。
 
 VOLEitHの核となるアイデアは、検証者が秘密情報（$\Delta$）を持つ代わりに、証明者自身がコミットし、後からFiat-Shamir変換\cite{fiatshamir}によって$\Delta$を導出する点にある。
