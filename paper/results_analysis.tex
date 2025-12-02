@@ -7,7 +7,7 @@
 VOLEitHプロトコル自体の性能を評価するため、標準的な暗号学的ハッシュ関数であるSHA-256とKeccak-Fの回路を用いてベンチマークを実施した。
 これらの回路はBristol Fashion形式で記述されたものを本研究用に変換したものである。
 
-\textbf{表1}に、Apple M1（メモリ16GB）環境で測定した両回路のベンチマーク結果を示す。
+\textbf{表\ref{tab:voleith_standalone_benchmark}}に、Apple M1（メモリ16GB）環境で測定した両回路のベンチマーク結果を示す。
 
 \begin{table}[htbp]
     \centering
@@ -32,7 +32,7 @@ Keccak-FはSHA-256よりも複雑な回路構造を持つため、証明生成�
 特筆すべきは証明サイズであり、SHA-256で約4.9MB、Keccak-Fでは約8.4MBにも達する。この巨大なデータサイズは、そのままではブロックチェーンのブロックサイズ制限やガス代の観点から、オンチェーンでの検証を著しく困難にする。
 
 次に、VOLEitHの性能特性をより明確にするため、既存のZKP実装であるCircom（\cite{eprint:iacr:2023:681}より）によるSHA-256実装との比較を行う。
-\textbf{表2}に両者の性能比較を示す。
+\textbf{表\ref{tab:sha256_comparison}}に両者の性能比較を示す。
 
 \begin{table}[htbp]
     \centering
@@ -43,7 +43,7 @@ Keccak-FはSHA-256よりも複雑な回路構造を持つため、証明生成�
         \textbf{実装} & \textbf{証明生成時間} & \textbf{証明サイズ} \\
         \hline
         \textbf{VOLEitH (本研究)} & \textbf{95 ms} & \textbf{\textasciitilde4.9 MB} \\
-        Circom (先行研究) & \textasciitilde1,473 ms & \textasciitilde821 Bytes \\
+        Circom (先行研究 \cite{eprint:iacr:2023:681}) & \textasciitilde1,473 ms & \textasciitilde821 Bytes \\
         \hline
     \end{tabular}
 \end{table}
@@ -59,7 +59,7 @@ Keccak-FはSHA-256よりも複雑な回路構造を持つため、証明生成�
 前節でVOLEitH単体では証明サイズが大きすぎるという課題が明らかになったため、本節ではVOLEitHの証明をSNARKで圧縮し、オンチェーンで検証するまでのエンドツーエンド（E2E）プロセス全体の性能を評価する。
 ベンチマークは、100ゲートおよび1000ゲートのADD回路とAND回路を用いて実施した。
 
-まず、VOLEitHフェーズの性能を\textbf{表3}に示す。
+まず、VOLEitHフェーズの性能を\textbf{表\ref{tab:e2e_vole_phase}}に示す。
 
 \begin{table}[htbp]
     \centering
@@ -81,7 +81,7 @@ Keccak-FはSHA-256よりも複雑な回路構造を持つため、証明生成�
 特に、ANDゲート回路はADDゲート回路と比較して、同程度のゲート数であっても証明生成時間、検証時間、証明サイズが大幅に増加する傾向にある。
 これは、\texttt{soft\_spoken}の実装において、ANDゲートのような乗算処理がADDゲートのような加算処理よりも多くのVOLEプロトコルラウンドや計算を必要とすることに起因すると考えられる。
 
-次に、SNARKフェーズの性能を\textbf{表4}に示す。このフェーズでは、VOLEitHの証明をSNARK（Groth16）形式に変換し、オンチェーン検証に適した形に圧縮する。
+次に、SNARKフェーズの性能を\textbf{表\ref{tab:e2e_snark_phase}}に示す。このフェーズでは、VOLEitHの証明をSNARK（Groth16）形式に変換し、オンチェーン検証に適した形に圧縮する。
 
 \begin{table}[htbp]
     \centering
