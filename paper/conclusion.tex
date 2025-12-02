@@ -1,4 +1,5 @@
 \section{結論と今後の展望 (Conclusion and Future Work)}
+todo: faest, faester,binius, Universal SNARK について説明する。
 
 \subsection{結論}
 本研究では、証明者効率の高いVOLE-in-the-Head（VOLEitH）プロトコルと、証明圧縮に優れたSNARKを組み合わせたハイブリッドアーキテクチャを構築し、そのオンチェーン検証における実現可能性と性能を定量的に評価した。
@@ -26,5 +27,4 @@
 \begin{itemize}
     \item \textbf{SNARK証明生成の最適化}: VOLEitHからR1CSへの変換フローを高速化し、Plonk/Halo2といったUniversal SNARKやSolidity verifierのガス最適化を検討する。
     \item \textbf{アプリケーション駆動の評価}: 分散型ID、プライベートトランザクション、オンチェーンゲームなど実アプリケーションでエンドツーエンド評価を行い、制約プロファイルとUX要件を明確化する。
-    \item \textbf{セキュリティ整合性の確保}: VOLEitHはLPN仮定に基づくポスト量子耐性を持つ一方で、Groth16は量子攻撃に脆弱である。STARK系などPQ耐性を備えた証明との組み合わせや、アーキテクチャ全体の形式的安全性解析が求められる。
 \end{itemize}

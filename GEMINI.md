@@ -69,3 +69,5 @@ The intended audience is individuals who are **not deeply familiar with Ethereum
 -   The language and structure should be tailored to clearly convey the significance of this research to the target audience.
 -   Use logical explanations, mathematical formulas, and diagrams to explain complex concepts.
 -   The paper should be written in Japanese.
+-   All necessary information for writing the paper is located within this directory.
+-   If more precise or detailed information is needed, please ask.
