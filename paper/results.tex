@@ -1,18 +1,19 @@
 \section{結果と分析 (Results and Analysis)}
 \label{sec:results_analysis}
 本章では、設計したベンチマークに基づき、VOLEitHとSNARKを組み合わせたハイブリッドアーキテクチャの性能を多角的に評価する。まず4.1節でVOLEitHプロトコル単体の性能を評価し、その基本的な特性（特に証明サイズと生成・検証速度）を明らかにする。
-次に4.2節で、VOLEitHの証明をSNARKで圧縮しオンチェーン検証するまでのエンドツーエンド（E2E）プロセス全体の性能を評価する。最後に4.5節でこれらの結果を統合し本アーキテクチャ全体の有効性とトレードオフについて考察し、4.6節で実用アプリケーションへの適用可能性について論じる。
+次に4.2節で、VOLEitHの証明をSNARKで圧縮しオンチェーン検証するまでのプロセス全体の性能を評価する。最後に4.5節でこれらの結果を統合し本アーキテクチャ全体の有効性とトレードオフについて考察し、4.6節で実用アプリケーションへの適用可能性について論じる。
 
-\subsection{VOLEitH単体性能評価}
-VOLEitHプロトコル自体の性能を評価するため、評価対象回路として採用した100/1000ゲートのADD（加算）回路およびAND（乗算）回路を用いてベンチマークを実施した。
-これらの回路は、VOLEitHにおける基本的な算術演算の性能特性を把握し、その後のSNARK統合フェーズにおけるボトルネックを分析するために特に重要である。
+\subsection{VOLEitHフェーズおよびSNARKフェーズの性能評価}
+前節（4.1節）で、VOLEitHプロトコル単体では基本的なADD/AND回路においても証明サイズが依然として大きく、そのままではオンチェーン検証に適さないという課題が明らかになった。
+この課題を解決するため、本節ではVOLEitHの証明をSNARKで圧縮しオンチェーン検証するまでのVOLEitHフェーズおよびSNARKフェーズを合わせたプロセス全体の性能を評価する。
+ベンチマークは、100ゲートおよび1000ゲートのADD回路とAND回路を用いて実施した。
 
-\textbf{表\ref{tab:e2e_vole_phase_intro_new}}に、Apple M1（メモリ16GB）環境で測定したADD/AND回路のVOLEitHフェーズにおける詳細なベンチマーク結果を示す。
+まず、VOLEitHフェーズの性能を\textbf{表\ref{tab:e2e_vole_phase}}に示す。
 
 \begin{table}[htbp]
     \centering
-    \caption{VOLEitH単体性能ベンチマーク (ADD/AND回路)}
-    \label{tab:e2e_vole_phase_intro_new}
+    \caption{VOLEitHフェーズおよびSNARKフェーズのベンチマーク - VOLEフェーズの性能}
+    \label{tab:vole_phase}
     \begin{tabular}{|l|l|l|l|l|}
         \hline
         \textbf{メトリクス} & \textbf{100 add} & \textbf{100 and} & \textbf{1000 add} & \textbf{1000 and} \\
@@ -21,39 +22,6 @@ VOLEitHプロトコル自体の性能を評価するため、評価対象回路�
         証明検証時間 & 68.75~\ensuremath{\mu\mathrm{s}} & 274.566~\ensuremath{\mu\mathrm{s}} & 585.6~\ensuremath{\mu\mathrm{s}} & 1.082~ms \\
         証明サイズ & 21,361 B & 42,491 B & 21,319 B & 233,175 B \\
         通信オーバーヘッド & 21,426 B & 42,556 B & 21,384 B & 233,240 B \\
-        証明者計算負荷 & 0.07\% CPU, 13.27 MB & 0.05\% CPU, 12.88 MB & 0.05\% CPU, 13.09 MB & 0.03\% CPU, 13.67 MB \\
-        検証者計算負荷 & 0.04\% CPU, 15.19 MB & 0.10\% CPU, 14.94 MB & 0.05\% CPU, 15.53 MB & 0.04\% CPU, 16.22 MB \\
-        \hline
-    \end{tabular}
-\end{table}
-
-表\ref{tab:e2e_vole_phase_intro_new}から、VOLEitHフェーズにおいては、回路のゲート数が増加するにつれて、証明生成時間、検証時間、証明サイズ、通信オーバーヘッドが増加することがわかる。
-特にANDゲート回路はADDゲート回路と比較して、同程度のゲート数であっても証明生成時間、検証時間、証明サイズが大幅に増加する傾向にある。
-これは、VOLEitHプロトコルにおける乗算処理が加算処理よりも多くのプロトコルラウンドや計算を必要とすることに起因すると考えられる。
-
-特筆すべきは証明サイズであり、最小で約21KB、最大で約233KBにも達する。
-これらの値は、オンチェーン検証に最終的に必要とされるSNARK証明のサイズ（1KB程度）と比較して依然として大きく、VOLEitHの証明がそのままではブロックチェーンのブロックサイズ制限やガス代の観点から、オンチェーンでの検証を著しく困難にするという課題を明確に示している。
-この「証明は高速だが、証明自体が巨大」という課題が、本研究でSNARKによる証明圧縮アプローチを採用する強力な動機となった。
-
-\subsection{エンドツーエンド（E2E）性能評価}
-前節（4.1節）で、VOLEitHプロトコル単体では基本的なADD/AND回路においても証明サイズが依然として大きく、そのままではオンチェーン検証に適さないという課題が明らかになった。
-この課題を解決するため、本節ではVOLEitHの証明をSNARKで圧縮しオンチェーン検証するまでのエンドツーエンド（E2E）プロセス全体の性能を評価する。
-ベンチマークは、100ゲートおよび1000ゲートのADD回路とAND回路を用いて実施した。
-
-まず、VOLEitHフェーズの性能を\textbf{表\ref{tab:e2e_vole_phase}}に示す。
-
-\begin{table}[htbp]
-    \centering
-    \caption{E2Eベンチマーク - VOLEフェーズの性能}
-    \label{tab:e2e_vole_phase}
-    \begin{tabular}{|l|l|l|l|l|}
-        \hline
-        \textbf{Metric} & \textbf{100 add} & \textbf{100 and} & \textbf{1000 add} & \textbf{1000 and} \\
-        \hline
-        Proof Gen. Time & 279.012~\ensuremath{\mu\mathrm{s}} & 476.5~\ensuremath{\mu\mathrm{s}} & 790.062~\ensuremath{\mu\mathrm{s}} & 1.649~ms \\
-        Proof Ver. Time & 68.75~\ensuremath{\mu\mathrm{s}} & 274.566~\ensuremath{\mu\mathrm{s}} & 585.6~\ensuremath{\mu\mathrm{s}} & 1.082~ms \\
-        Proof Size & 21,361 B & 42,491 B & 21,319 B & 233,175 B \\
-        Comm. Overhead & 21,426 B & 42,556 B & 21,384 B & 233,240 B \\
         \hline
     \end{tabular}
 \end{table}
@@ -66,16 +34,16 @@ VOLEitHプロトコル自体の性能を評価するため、評価対象回路�
 
 \begin{table}[htbp]
     \centering
-    \caption{E2Eベンチマーク - SNARKフェーズの性能}
-    \label{tab:e2e_snark_phase}
+    \caption{VOLEitHフェーズおよびSNARKフェーズのベンチマーク - SNARKフェーズの性能}
+    \label{tab:snark_phase}
     \begin{tabular}{|l|l|l|l|l|}
         \hline
-        \textbf{Metric} & \textbf{100 add} & \textbf{100 and} & \textbf{1000 add} & \textbf{1000 and} \\
+        \textbf{メトリクス} & \textbf{100 add} & \textbf{100 and} & \textbf{1000 add} & \textbf{1000 and} \\
         \hline
-        Proof Gen. Time & 272 ms & 1,794 ms & 324 ms & 8,003 ms \\
-        Constraints & 86,080 & 3,471,680 & 86,080 & 33,942,080 \\
-        Proof Size & 1,055 B & 1,055 B & 1,055 B & 1,055 B \\
-        Gas Cost & 208,967 & 208,967 & 208,967 & 208,967 \\
+        証明生成時間 & 272 ms & 1,794 ms & 324 ms & 8,003 ms \\
+        制約数 & 86,080 & 3,471,680 & 86,080 & 33,942,080 \\
+        証明サイズ & 1,055 B & 1,055 B & 1,055 B & 1,055 B \\
+        ガス消費量 & 208,967 & 208,967 & 208,967 & 208,967 \\
         \hline
     \end{tabular}
 \end{table}
@@ -101,7 +69,7 @@ VOLEitHプロトコル自体の性能を評価するため、評価対象回路�
 これは、SNARKの証明生成における主要な計算ボトルネックが、回路の複雑性、特に乗算の多さに起因することを示唆している。
 
 \paragraph{主な観測事項}
-本章で得られたE2E測定結果から、以下の特徴が明らかになった。
+本章で得られたVOLEitHフェーズおよびSNARKフェーズの測定結果から、以下の特徴が明らかになった。
 \begin{itemize}
     \item ANDゲートはADDゲートよりも大幅に制約数と証明時間を増加させ、VOLEフェーズでも証明サイズを押し上げる。
     \item ADDのみの回路では制約数がほぼ一定であるのに対し、ANDゲート数に比例してSNARK制約が増える。
