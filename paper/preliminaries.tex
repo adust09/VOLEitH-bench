@@ -10,12 +10,12 @@
 \subsection{Vector Oblivious Linear Evaluation (VOLE)}
 Vector Oblivious Linear Evaluation（VOLE）は、送信者が複数の秘密データの中から受信者が選択した一つのみを伝え、かつ送信者には何が選択されたかを知られないという性質を持つOblivious Transfer (OT) の算術形式と見なされる暗号学的プリミティブであり、証明者と検証者の間で、秘密裡に線形代数的な相関関係を確立する二者間プロトコルである。
 
-$k$をセキュリティパラメータ（暗号システムの安全性の強度を示す数値）、$\mathbb{F}_{2^k}$を要素数$2^k$の有限体とする。プロトコル完了後、証明者は秘密のベクトル $\mathbf{u} \in \mathbb{F}_2^\ell$ とランダムなVOLEタグ $\mathbf{v} \in \mathbb{F}_{2^k}^\ell$ を保持し、検証者はグローバルキー $\Delta \in \mathbb{F}_{2^k}$ とVOLEキー $\mathbf{q} \in \mathbb{F}_{2^k}^\ell$ を保持する。これらの値は、以下のVOLE相関式を満たす。
+$k$をセキュリティパラメータ、$\mathbb{F}_{2^k}$を要素数$2^k$の有限体とする。プロトコル完了後、証明者は秘密のベクトル $\mathbf{u} \in \mathbb{F}_2^\ell$ とランダムなVOLEタグ $\mathbf{v} \in \mathbb{F}_{2^k}^\ell$ を保持し、検証者はグローバルキー $\Delta \in \mathbb{F}_{2^k}$ とVOLEキー $\mathbf{q} \in \mathbb{F}_{2^k}^\ell$ を保持する。これらの値は、以下のVOLE相関式を満たす。
 \begin{equation}
     q_i = u_i \cdot \Delta + v_i \quad (i=0, \dots, \ell-1)
 \end{equation}
 この相関は、証明者が持つランダムビット $u_i$ に対する\textbf{線形準同型コミットメントスキーム}として機能する。
-一般にコミットメントスキームとは、送信者が秘密の値を事前に確定させ（コミット）、後からその値を公開し、そのコミットが偽りでないことを証明できる暗号プリミティブである。この線形準同型コミットメントは以下の性質を持つ。
+一般にコミットメントスキームとは、暗号プリミティブである。この線形準同型コミットメントは以下の性質を持つ。
 \begin{description}
     \item[秘匿性 (Hiding)] 検証者は、$q_i$と$\Delta$から$u_i$の情報を得られない。これは、証明者が知るランダムな値$v_i$が$u_i$の値をマスクするためである。
     \item[拘束性 (Binding)] 証明者は、検証者の持つ秘密$\Delta$を知らない限り、一度コミットした$u_i$を不正な値に開示することができない。その成功確率は計算論的に無視できるほど小さい。
@@ -37,7 +37,7 @@ VOLE相関 ($q_i = u_i \cdot \Delta + v_i$) は、その構造自体が線形な
 一方で、乗算のような\textbf{非線形演算}は、この線形構造を破壊する。2つのVOLE相関を乗算しても、その結果が有効なVOLE相関となることはない。そのため、証明者は、自身が正しく乗算を実行したことを検証者に納得させるための、ないしは検証させるための追加のプロトコル、すなわち次節で詳述する\textbf{乗算検定}を実行する必要がある。この検定は、非線形な乗算関係の検証を、追加の通信を伴う線形なチェックへと帰着させるものである。したがって、VOLEベースのゼロ知識証明における主要な計算・通信コストは、この非線形演算を処理するための乗算検定に集約される。
 
 \subsection{VOLE-based ZKと乗算検定}
-ゼロ知識証明とは、ある命題が真であることを、その命題が真であること以外のいかなる情報も開示することなく証明者が検証者に納得させる暗号技術である。VOLEが有する線形性（加法準同型性）を利用することで、効率的なゼロ知識証明プロトコル（VOLE-based ZK）を構築可能である。このパラダイムは、QuickSilver\cite{quicksilver}などのプロトコルで採用されている。
+ゼロ知識証明とは、VOLEが有する線形性（加法準同型性）を利用することで、効率的なゼロ知識証明プロトコル（VOLE-based ZK）を構築可能である。このパラダイムは、QuickSilver\cite{quicksilver}などのプロトコルで採用されている。
 
 乗算ゲート、例えば $w_\gamma = w_\alpha \cdot w_\beta$ の検証は、特別な\textbf{乗算検定プロトコル}を必要とする。このプロトコルは、証明者と検証者が保持するVOLE相関が、実際の乗算関係を正しく反映しているかを、検証者の秘密キー$\Delta$を利用して確認するものである。
 \begin{description}
@@ -53,7 +53,7 @@ VOLE相関 ($q_i = u_i \cdot \Delta + v_i$) は、その構造自体が線形な
 
 \subsection{VOLE-in-the-Head}
 前節で述べた指定検証者問題を解決し、公開検証可能性を実現するものがVOLE-in-the-Head (VOLEitH) と呼ばれるコンパイラである。
-VOLEitHは、SoftSpokenOT \cite{softspokenot} のような効率的なVOLE相関生成プロトコルを、MPC-in-the-Head \cite{mpc-in-the-head} の手法と組み合わせることで、非対話（Non-interactive、すなわち証明生成と検証の間に追加の通信が不要であること）かつ公開検証可能な証明を構築する。
+VOLEitHは、SoftSpokenOT \cite{softspokenot} のような効率的なVOLE相関生成プロトコルを、MPC-in-the-Head \cite{mpc-in-the-head} の手法と組み合わせることで、非対話（Non-interactive）かつ公開検証可能な証明を構築する。
 
 VOLEitHの効率性の根幹を支えるのは、\textbf{SoftSpokenOT}\cite{softspokenot}と呼ばれるプロトコルである。これは、少数の高価なベースOT（Oblivious Transfer）から、擬似乱数を用いて極めて多数の安価なOTインスタンスを生成するOT拡張技術の一種である。
 特に、相関のある乱数を利用してOTをバッチ処理することに特化しており、VOLE相関を生成する上で必要となる「$N$個のシードの中から、チャレンジで指定された1個のシードを除いた$N-1$個の情報を効率的に転送する」という処理（All-but-One OT）と高い親和性を持つ。
@@ -101,14 +101,20 @@ VOLE-in-the-Head (VOLEitH) プロトコルでは、このGGMツリーを用い�
     検証者は、復元した$N-1$個のリーフシードと、公開されている$h_{com}$が正しく再構成できることを確認し、開示の正当性を検証する。最後に、これらのシードと$\Delta$を用いてVOLEキー$\mathbf{q}$を計算し、VOLE相関$q_i = u_i \Delta + v_i$の検証へと進む。
 \end{description}
 
+VOLEitHプロトコルによって生成される非対話証明は、ここまで説明したGGMツリーのコミットメント $h_{com}$ と、チャレンジ $\Delta$ に対応する開示情報 $pdecom$ に加えて、算術回路全体の計算の正当性を示すための情報を含んでいる。
+VOLEの準同型性により、加算のような線形演算の検証は追加の証明情報を必要としない。一方で、回路内の\textbf{全ての乗算ゲート}については、その一つ一つが2.3節で述べた\textbf{乗算検定}をパスすることを証明しなければならない。
+そのため、VOLEitHの証明には、回路内の全乗算ゲートに対応する検証情報（各ゲートの $a_0, a_1$ に相当する値）が埋め込まれることになる。
+
+結果として、VOLEitHの証明サイズは、GGMツリーのパラメータに依存する比較的小さな固定部分と、\textbf{検証対象の算術回路に含まれる乗算ゲートの数にほぼ比例して増加する可変部分}から構成される。この特性は、計算が複雑になるほど証明が長くなることを意味し、次節で述べるGroth16のように、回路の規模によらず証明サイズが一定となるSNARKsとは対照的である。本研究におけるベンチマークでは、この証明サイズのスケール特性を定量的に評価する。
+
 \subsection{Groth16}
 まず、Groth16を理解するために、zk-SNARKs（zero-knowledge Succinct Non-interactive ARguments of Knowledge）について説明する。
 zk-SNARKsは、以下の性質を持つ暗号学的証明システムである。
 \begin{itemize}
-    \item \textbf{ゼロ知識 (Zero-Knowledge)}: 証明が「あるステートメントが真である」という事実以外のいかなる情報も開示しない。例えば、秘密の入力値を知っていることを証明しても、その秘密の値自体は明かされない。
-    \item \textbf{簡潔性 (Succinctness)}: 証明のサイズが非常に小さく、検証時間が短い。これにより、検証コストが重要なブロックチェーンなどの環境に適している。
-    \item \textbf{非対話性 (Non-interactive)}: 事前の一度きりのセットアップの後、証明者と検証者の間でインタラクションなしに証明が生成・検証される。
-    \textbf{知識の論拠 (ARgument of Knowledge)}: 証明者が実際に秘密の入力（witness）を知っていることを保証する。
+    \item \textbf{ゼロ知識 (Zero-Knowledge)}
+    \item \textbf{簡潔性 (Succinctness)}
+    \item \textbf{非対話性 (Non-interactive)}
+    \textbf{知識の論拠 (ARgument of Knowledge)}
 \end{itemize}
 Groth16は、このようなzk-SNARKsの中でも特に効率的で広く利用されている方式の一つであり、特にその証明サイズの小ささと検証の速さで知られている。
 ブロックチェーンのように検証コストが重視される環境においては、特に強力な選択肢となる。
@@ -119,7 +125,7 @@ Groth16は、算術回路として表現された計算を、R1CS（Rank-1 Const
 このプロトコルは、楕円曲線上のペアリング（双線形写像）の性質を最大限に活用し、高い効率性を実現している。
 \begin{description}
     \item[Setup ($\mathcal{C} \to (\text{pk}, \text{vk})$)]
-    このフェーズでは、証明対象の計算をR1CS形式で表現された算術回路 $\mathcal{C}$ から、証明鍵（Proving Key, pk）と検証鍵（Verification Key, vk）を生成する。このプロセスは回路ごとに一度だけ実行され、通常「信頼できるセットアップ（Trusted Setup）」として知られる。このセットアップでは、ランダムに選択された秘密のパラメータ $s, \alpha, \beta, \gamma, \delta \in \mathbb{F}_p^*$ を用いて、共通参照文字列（Common Reference String, CRS）が生成される。このCRSには、$G_1, G_2$ 上の様々な群要素の組 $([s^i]_1, [s^i]_2)$, $([\alpha]_1, [\alpha]_2)$, $([\beta]_1, [\beta]_2)$, $([\gamma]_1, [\gamma]_2)$, $([\delta]_1, [\delta]_2)$, $([\beta s^i]_1)$, $([\gamma s^i]_1)$, $([s^i \text{poly}(x)]_1)$ などが含まれる。ここで $\mathbb{G}_1, \mathbb{G}_2$ は楕円曲線上の点からなる群であり、$[X]_1, [X]_2$ はそれぞれ $\mathbb{G}_1, \mathbb{G}_2$ における $X$ の楕円曲線乗算を意味する。このCRS生成時に用いられた秘密のパラメータ（「有毒廃棄物 (toxic waste)」と呼ばれる）が漏洩すると、不正な証明を生成可能になるため、その破棄が極めて重要である。
+    このフェーズでは、証明対象の計算をR1CS形式で表現された算術回路 $\mathcal{C}$ から、証明鍵（Proving Key, pk）と検証鍵（Verification Key, vk）を生成する。このプロセスは回路ごとに一度だけ実行され、通常Trusted Setupとして知られる。このセットアップでは、ランダムに選択された秘密のパラメータ $s, \alpha, \beta, \gamma, \delta \in \mathbb{F}_p^*$ を用いて、Common Reference String (CRS) が生成される。このCRSには、$G_1, G_2$ 上の様々な群要素の組 $([s^i]_1, [s^i]_2)$, $([\alpha]_1, [\alpha]_2)$, $([\beta]_1, [\beta]_2)$, $([\gamma]_1, [\gamma]_2)$, $([\delta]_1, [\delta]_2)$, $([\beta s^i]_1)$, $([\gamma s^i]_1)$, $([s^i \text{poly}(x)]_1)$ などが含まれる。ここで $\mathbb{G}_1, \mathbb{G}_2$ は楕円曲線上の点からなる群であり、$[X]_1, [X]_2$ はそれぞれ $\mathbb{G}_1, \mathbb{G}_2$ における $X$ の楕円曲線乗算を意味する。このCRS生成時に用いられた秘密のパラメータ（toxic waste）が漏洩すると、不正な証明を生成可能になるため、その破棄が極めて重要である。
     \item[Prove ($\text{pk}, x, w \to \pi$)]
     証明者は、証明鍵 pk、公開入力 $x$、および秘密入力 $w$ を用いて、命題が真であることの証明 $\pi = (A, B, C)$ を生成する。この証明は、QAPの解に対応する特定の多項式 $h(s)$ やその他のランダム性 $r, t \in \mathbb{F}_p^*$ を用いて、$\mathbb{G}_1$ および $\mathbb{G}_2$ 上の3つの群要素 $A \in \mathbb{G}_1, B \in \mathbb{G}_2, C \in \mathbb{G}_1$ として構築される。具体的には、$A = [A_w(s) + r\delta]_1$, $B = [B_w(s) + t\delta]_2$ または $B = [B_w(s) + t\delta]_1$, $C = [C_w(s) + (h(s)T(s) + \frac{A_w(s) \beta + B_w(s)\alpha + \gamma}{r\delta})]_1$ のような形式をとる（具体的な形式はGroth16論文参照）。ここで $A_w(s), B_w(s), C_w(s)$ は公開入力と秘密入力 $w$ から導出される多項式である。
     \item[Verify ($\text{vk}, x, \pi \to \{\text{True}, \text{False}\}$)]
