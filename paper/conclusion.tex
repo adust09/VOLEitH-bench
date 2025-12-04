@@ -1,11 +1,12 @@
 \section{結論と今後の展望 (Conclusion and Future Work)}
+本論文では主にGroth16を採用したが、今後の展望として、FAEST/FAESTER（高速なポスト量子署名スキーム）、Binius（二進演算に特化したZKPシステム）、およびUniversal SNARK（単一のセットアップで任意の回路に対応可能なSNARKs、例：Plonk/Halo2）などの代替技術の検討が挙げられる。
 
 \subsection{結論}
 本研究では、証明者効率の高いVOLE-in-the-Head（VOLEitH）プロトコルと、証明圧縮に優れたSNARKを組み合わせたハイブリッドアーキテクチャを構築し、そのオンチェーン検証における実現可能性と性能を定量的に評価した。
 
 ベンチマークを通じて、以下の主要な知見が得られた。
 \begin{enumerate}
-    \item \textbf{VOLEitHの基本的なトレードオフ}: VOLEitHは、CircomのようなR1CSベースのシステムと比較して、証明者の計算を最大15.5倍高速化する一方で、生成される証明サイズが6000倍以上も増大することが確認された。
+    \item \textbf{VOLEitHの基本的なトレードオフ}: VOLEitHは、証明者の計算をマイクロ秒からミリ秒オーダーで実行可能であり、その高速性が確認された。一方で、生成される証明サイズは、基本的な回路であっても数十KBから数百KBに達し、オンチェーン検証に用いられるSNARK証明（1KB）と比較して依然として大きく、その圧縮の必要性が再確認された。
     この巨大な証明は、単体ではオンチェーン検証の大きな障壁となる。
     \item \textbf{SNARK圧縮の有効性}: VOLEitHの証明をSNARK（Groth16）で圧縮することにより、回路の複雑さに関わらず、最終的な証明サイズを1,055バイト、オンチェーン検証コストを約21万ガスに固定化できることを示した。
     これにより、VOLEitHのオンチェーン応用の道が拓かれる。
@@ -18,13 +19,12 @@
 本研究の成果を踏まえ、特に優先度の高い研究課題は以下の3点である。
 \begin{enumerate}
     \item \textbf{Field Mapping最適化}: Mystique型のデータ変換やLookup TableをVOLEitHに取り入れ、$\mathbb{F}_2$と$\mathbb{F}_p$間の射像コストを削減する。
-    \item \textbf{GGM木再構成の高度化}: FAESTERのような最適化とFoldingスキームを組み合わせ、検証フェーズに必要な制約数を抑制する。
+    \item \textbf{GGMツリー再構成の高度化}: FAESTERのような最適化とFoldingスキームを組み合わせ、検証フェーズに必要な制約数を抑制する。
     \item \textbf{代替SNARK/証明システムの検討}: BiniusやRecursive SNARKなど、二進演算に適した新しい証明システムを評価し、ボトルネックの抜本的解決を目指す。
 \end{enumerate}
 
 これらに加えて、以下のエンジニアリング課題にも継続的に取り組む必要がある。
 \begin{itemize}
     \item \textbf{SNARK証明生成の最適化}: VOLEitHからR1CSへの変換フローを高速化し、Plonk/Halo2といったUniversal SNARKやSolidity verifierのガス最適化を検討する。
-    \item \textbf{アプリケーション駆動の評価}: 分散型ID、プライベートトランザクション、オンチェーンゲームなど実アプリケーションでエンドツーエンド評価を行い、制約プロファイルとUX要件を明確化する。
-    \item \textbf{セキュリティ整合性の確保}: VOLEitHはLPN仮定に基づくポスト量子耐性を持つ一方で、Groth16は量子攻撃に脆弱である。STARK系などPQ耐性を備えた証明との組み合わせや、アーキテクチャ全体の形式的安全性解析が求められる。
+    \item \textbf{アプリケーション駆動の評価}: 分散型ID、プライベートトランザクション、オンチェーンゲームなど実アプリケーションでエンドツーエンド評価を行い、制約プロファイルとユーザー体験の要件を明確化する。
 \end{itemize}

@@ -1,64 +1,139 @@
 \section{前提知識と関連研究}
-本章では、後続のベンチマークと考察を理解するために必要な暗号学的前提を、簡潔に整理する。
+本章では、後続のベンチマークと考察を理解するために必要な暗号学的前提を簡潔に整理する。
+\subsection{本研究の背景と目的}
+近年、ブロックチェーン技術の発展に伴い、そのスケーラビリティとプライバシー保護が重要な課題となっている。ZKPは、これらの課題に対する有効な解決策として注目されており、特にブロックチェーン上での計算負荷を軽減し、プライベートな情報を守りながら取引を検証する手段として期待されている。
+
+しかし、多くの既存のZKPプロトコルは、公開検証可能性（Public Verifiability）を達成するために、複雑なTrusted Setupや高コストなペアリング計算を必要とする場合があった。このような背景の中、VOLE-in-the-Head (VOLEitH) プロトコルは、指定検証者証明の課題を克服し、非対話かつ公開検証可能な証明を効率的に構築する新しいアプローチとして提案された。
+
+本研究の目的は、このVOLEitHプロトコルがブロックチェーン環境において実際にどの程度の性能を発揮するかを評価することである。具体的には、証明生成時間、証明検証時間、証明サイズ、およびそれらのオンチェーン検証におけるガス消費量などの主要な性能指標をベンチマークし、その実用性や効率性を検証することを目的とする。
 
 \subsection{Vector Oblivious Linear Evaluation (VOLE)}
-VOLEは、二者間で線形関係を隠したままMAC相関を生成するプリミティブである。
-有限体 $F$ 上で、送信者はベクトル $\mathbf{u}, \mathbf{v} \in F^m$ を、受信者はグローバル鍵 $\mathbf{\Delta} \in F^m$ を入力とする。
-プロトコル終了後、受信者は
+Vector Oblivious Linear Evaluation（VOLE）は、送信者が複数の秘密データの中から受信者が選択した一つのみを伝え、かつ送信者には何が選択されたかを知られないという性質を持つOblivious Transfer (OT) の算術形式と見なされる暗号学的プリミティブであり、証明者と検証者の間で、秘密裡に線形代数的な相関関係を確立する二者間プロトコルである。
+
+$k$をセキュリティパラメータ、$\mathbb{F}_{2^k}$を要素数$2^k$の有限体とする。プロトコル完了後、証明者は秘密のベクトル $\mathbf{u} \in \mathbb{F}_2^\ell$ とランダムなVOLEタグ $\mathbf{v} \in \mathbb{F}_{2^k}^\ell$ を保持し、検証者はグローバルキー $\Delta \in \mathbb{F}_{2^k}$ とVOLEキー $\mathbf{q} \in \mathbb{F}_{2^k}^\ell$ を保持する。これらの値は、以下のVOLE相関式を満たす。
 \begin{equation}
-    \mathbf{q} = \mathbf{u} \circ \mathbf{\Delta} - \mathbf{v} \in F^m
+    q_i = u_i \cdot \Delta + v_i \quad (i=0, \dots, \ell-1)
 \end{equation}
-を満たすペア $(\mathbf{u}, \mathbf{q})$ を得る（$\circ$ は要素積）。
-$\mathbf{q}$ は $\mathbf{u}$ に対する情報理論的MACとなり、$\mathbf{\Delta}$ を知らずに $\mathbf{q}$ を固定したまま $\mathbf{u}$ を改ざんすることはできない（binding）。
-この性質が後述の健全性担保に直接利用される。
+この相関は、証明者が持つランダムビット $u_i$ に対する\textbf{線形準同型コミットメントスキーム}として機能する。
+一般にコミットメントスキームとは、暗号プリミティブである。この線形準同型コミットメントは以下の性質を持つ。
+\begin{description}
+    \item[秘匿性 (Hiding)] 検証者は、$q_i$と$\Delta$から$u_i$の情報を得られない。これは、証明者が知るランダムな値$v_i$が$u_i$の値をマスクするためである。
+    \item[拘束性 (Binding)] 証明者は、検証者の持つ秘密$\Delta$を知らない限り、一度コミットした$u_i$を不正な値に開示することができない。その成功確率は計算論的に無視できるほど小さい。
+\end{description}
+VOLEの最も強力な特性は、その線形準同型性にある。同じグローバルキー$\Delta$を持つ複数のVOLE相関 $(u_i, v_i, q_i)$ と公開定数 $c, c_1, \dots, c_n \in \mathbb{F}_{2^k}$ が与えられたとき、証明者と検証者は新しい値 $u' = c + \sum_{i=1}^{n} c_i u_i$ に対するVOLE相関 $(u', v', q')$ を、追加の通信なしにローカルで計算できる。
+\begin{description}
+    \item[証明者の計算] 証明者は新しいVOLEタグ$v'$を以下のように計算する。
+    \begin{equation}
+        v' = \sum_{i=1}^{n} c_i v_i
+    \end{equation}
+    \item[検証者の計算] 検証者は新しいVOLEキー$q'$を以下のように計算する。
+    \begin{equation}
+        q' = c \cdot \Delta + \sum_{i=1}^{n} c_i q_i
+    \end{equation}
+\end{description}
+算術回路とは、加算や乗算などの算術演算を表すゲートで構成される計算モデルであり、暗号学的証明システムにおいてプログラムの検証対象として用いられる。VOLEが有するこの強力な線形準同型性は、算術回路の検証コストに直接的な影響を及ぼす。
+VOLE相関 ($q_i = u_i \cdot \Delta + v_i$) は、その構造自体が線形な関係式である。そのため、加算やスカラー乗法といった\textbf{線形演算}は、VOLEと高い親和性を持つ。例えば、2つの値に対するVOLE相関が与えられたとき、それらの和に対する新しいVOLE相関は、証明者と検証者がそれぞれ手元で対応する値を足し合わせるだけで構築可能である。これは、線形演算がVOLEの線形構造を保存するためであり、追加の通信を一切要しない。
 
-\paragraph{サブフィールドVOLE}
-FAESTなどでは、入力 $\mathbf{u}$ を $\mathbb{F}_2$ に制限しつつ、$\mathbf{v}, \mathbf{q}, \mathbf{\Delta}$ を拡大体 $\mathbb{F}_{2^\lambda}$ 上に置くサブフィールドVOLEが用いられる。
-これはビット演算を保ちつつ、MACは大きな体で保持することで効率と安全性を両立するためである。
+一方で、乗算のような\textbf{非線形演算}は、この線形構造を破壊する。2つのVOLE相関を乗算しても、その結果が有効なVOLE相関となることはない。そのため、証明者は、自身が正しく乗算を実行したことを検証者に納得させるための、ないしは検証させるための追加のプロトコル、すなわち次節で詳述する\textbf{乗算検定}を実行する必要がある。この検定は、非線形な乗算関係の検証を、追加の通信を伴う線形なチェックへと帰着させるものである。したがって、VOLEベースのゼロ知識証明における主要な計算・通信コストは、この非線形演算を処理するための乗算検定に集約される。
 
-\subsection{MPC-in-the-Head (MPCitH)}
-MPCitHは、NPリレーションの知識証明を「頭の中で」実行するMPCに還元し、ビュー開示で健全性を担保するZKフレームワークである。
-NPリレーション $R(x, w)$ に対し、証明者 $P$ は証人 $w$ を $N$ 份のシェア $w_i$ に分割し（加法秘密分散等）、$f(x, w_1,\dots,w_N)=R(x,\bigoplus_i w_i)$ を計算する半正直MPC $\Pi_f$ を頭の中でエミュレートする。
-識別プロトコルは次の4段階で構成される。
-\begin{enumerate}
-    \item \textbf{ビュー生成とコミット}: $\Pi_f$ の各仮想パーティのビュー $V_1,\dots,V_N$ にコミットする。
-    \item \textbf{チャレンジ}: 検証者 $V$ はインデックス $i^* \in \{1,\dots,N\}$ をランダムに選ぶ。
-    \item \textbf{開示}: $P$ は $i^*$ を除く $N-1$ 個のビューを開示する。
-    \item \textbf{検証}: $V$ は開示ビューの整合性と、$\Pi_f$ の実行規則への準拠を検査する。
-\end{enumerate}
-$\Pi_f$ が $(N-1)$-privacy を満たすとき、開示されなかった $V_{i^*}$ を偽造しない限り不正な $P$ は受理されないため、健全性が得られる。
-通信量は回路サイズ $s$ に線形（$O(s) + \mathrm{poly}(k,\log s)$）で、汎用性が高い。
+\subsection{VOLE-based ZKと乗算検定}
+ゼロ知識証明とは、VOLEが有する線形性（加法準同型性）を利用することで、効率的なゼロ知識証明プロトコル（VOLE-based ZK）を構築可能である。このパラダイムは、QuickSilver\cite{quicksilver}などのプロトコルで採用されている。
 
-\subsection{QuickSilver}
-QuickSilverは、VOLE MACの準同型性を用いて乗算制約を検査するLine-Point系ゼロ知識プロトコルであり、VOLE相関を前提に軽量な検証を実現する。
-QuickSilverはLine-Point Zero-Knowledgeパラダイムを用い、VOLE MACの加法準同型性で乗算制約 $w_\alpha \cdot w_\beta = w_\gamma$ を検査する。
-証明者は応答を $\tilde{a}_0,\tilde{a}_1,\tilde{b}$ にマスクし、検証者は VOLE 関係
-\begin{equation}
-    \tilde{b} = \tilde{a}_0 + \tilde{a}_1 \cdot \Delta
-\end{equation}
-が成立することを確認するだけで健全性を得る。
-VOLEitHは、このQuickSilver型の検査をGGMベースのVCと組み合わせ、公開検証を実現している。
+乗算ゲート、例えば $w_\gamma = w_\alpha \cdot w_\beta$ の検証は、特別な\textbf{乗算検定プロトコル}を必要とする。このプロトコルは、証明者と検証者が保持するVOLE相関が、実際の乗算関係を正しく反映しているかを、検証者の秘密キー$\Delta$を利用して確認するものである。
+\begin{description}
+    \item[証明者の役割] 証明者は、乗算ゲートに関わる自身の秘密値（$u_\alpha, v_\alpha, u_\beta, v_\beta$など）に基づいて、中間値である$a_0$と$a_1$を計算し、検証者に送信する。
+    \item[検証者の役割] 検証者は、自身が持つVOLEキー（$q_\alpha, q_\beta, q_\gamma$）から特定の値$b$を計算する。その後、証明者から受け取った$a_0, a_1$と、自身の秘密キー$\Delta$を用いて、以下の線形な等式が成立するかを検証する。
+    \begin{equation}
+        b \stackrel{?}{=} a_0 + a_1 \cdot \Delta
+    \end{equation}
+    このチェックが成功すれば、証明者が正直に計算を行ったことが高い確率で保証される。もし証明者が不正を働いていた場合、この等式を成立させるには$\Delta$の値を推測する必要があり、その成功確率は計算論的に無視できるほど小さい。
+\end{description}
+
+しかし、この仕組みは、検証者がグローバルキー$\Delta$の値を秘密に保つことを前提としている。このため、証明を検証できるのが特定の検証者に限定される\textbf{指定検証者証明（Designated Verifier Proof）}となり、第三者が検証できる\textbf{公開検証可能性（Public Verifiability）}を持たないという課題を有していた。
 
 \subsection{VOLE-in-the-Head}
-VOLEitHは、MPC-in-the-Headの開示構造にQuickSilver型のVOLE検査を組み込み、指定検証者型VOLEを公開検証可能に拡張した手法である。
-VOLEitHは、MPCitHの「開示しない1パーティ」を、VOLEのグローバル鍵 $\mathbf{\Delta}$ に対応付けることで、指定検証者型のVOLE系プロトコルを公開検証可能にする。
-鍵となるのが、長さ倍増PRGから構成するGGM木に基づく All-but-One ベクトルコミットメント (VC) である。
-\begin{itemize}
-    \item 高さ $h=\log N$ のGGM木の根シードから $N$ 個の葉シード $sd_i$ を生成し、各葉にVOLE用の乱数列 $r_i$ を割り当てる。
-    \item 開示しないインデックス $j^*$ を除き、$P$ は各葉への経路で必要な兄弟ノードのシードを開示するだけで $N-1$ 個の $r_i$ を再現させられる（通信量は $O(\log N)$）。
-    \item 開示されない $r_{j^*}$ が $\mathbf{\Delta}$ に対応し、$V$ は公開された $r_i$ の線形結合から $\mathbf{q}=\mathbf{u}\circ\mathbf{\Delta}-\mathbf{v}$ を再構成する。
-\end{itemize}
-この構成により、OTを用いずに非対話でVOLE相関を生成し、MACのbinding性を保ったままFiat--Shamir変換を適用できる。
+前節で述べた指定検証者問題を解決し、公開検証可能性を実現するものがVOLE-in-the-Head (VOLEitH) と呼ばれるコンパイラである。
+VOLEitHは、SoftSpokenOT \cite{softspokenot} のような効率的なVOLE相関生成プロトコルを、MPC-in-the-Head \cite{mpc-in-the-head} の手法と組み合わせることで、非対話（Non-interactive）かつ公開検証可能な証明を構築する。
 
-\subsection{SNARKとオンチェーン検証の概観}
-Groth16を例に、オンチェーン検証は (i) 証明と公開入力をcalldataで受領、(ii) 回路固有の検証鍵をコントラクトに格納、(iii) 公開入力とICベクトルのMSMで\(\mathrm{vk\_x}\)を計算、(iv) ペアリングprecompileで等式を判定、の4段階からなる。
-ガスは主にペアリング（1回あたり\(\sim\)34k gas、合計15--20万gas規模）と公開入力数に比例するMSMで支配され、calldata課金は16 gas/非ゼロバイトで証明サイズ1055バイトなら約1.7万gasとなる。
-コードサイズは24KB上限のため検証鍵の配置も設計上の制約となる。
+VOLEitHの効率性の根幹を支えるのは、\textbf{SoftSpokenOT}\cite{softspokenot}と呼ばれるプロトコルである。これは、少数の高価なベースOT（Oblivious Transfer）から、擬似乱数を用いて極めて多数の安価なOTインスタンスを生成するOT拡張技術の一種である。
+特に、相関のある乱数を利用してOTをバッチ処理することに特化しており、VOLE相関を生成する上で必要となる「$N$個のシードの中から、チャレンジで指定された1個のシードを除いた$N-1$個の情報を効率的に転送する」という処理（All-but-One OT）と高い親和性を持つ。
+結果として、SoftSpokenOTはVOLEitHにおけるVOLE相関の生成エンジンとして機能し、プロトコル全体の通信・計算コストを大幅に削減する役割を担う。
 
-\subsection{設計指針（本稿で用いる前提）}
+その核心は、検証者が秘密のグローバルキー$\Delta$を持つ代わりに、証明者自身がプロトコルの中で$\Delta$の元となる情報にコミットし、後からFiat-Shamir変換によってチャレンジとして$\Delta$を導出する点である。Fiat-Shamir変換とは、対話型の証明プロトコルを、チャレンジがハッシュ関数によって生成される非対話型の証明に変換する一般的な手法である。
+このプロセスは、GGMツリー（Goldreich-Goldwasser-Micali Tree, GGM）\cite{ggm}を用いたAll-but-One Oblivious Transfer (OT) の技術を用いて効率的に実装される。
+
+\paragraph{GGMツリーによるAll-but-Oneコミットメント}
+
+GGMツリーは、短い入力（シード）から長い擬似乱数系列を効率的に生成するための仕組みであり、特に擬似乱数生成器（PRG）を繰り返し適用することで構築される木構造である。
+このツリーの各ノードは、親ノードのシードからPRGを用いて計算され、再帰的に展開される。
+最終的に最下層に到達した「葉」（リーフノード）には、一連の擬似乱数が対応付けられる。
+GGMツリーの重要な特性は、この構造を利用して、ある特定の一つのリーフノード以外の全てのリーフノードの値を効率的に開示できる点にある。この性質が、All-but-Oneコミットメントスキームを構築する上で不可欠となる。
+
+All-but-Oneコミットメントは、コミッターが複数の値の集合（例えば、$N$個の値）に対してコミットメントを行い、後からその集合内の任意の一つの値**以外**の全ての値を公開できる暗号プリミティブである。このとき、公開されなかった一つの値については、コミットメントの受信者には全く情報が漏洩しないことが保証される。
+
+VOLE-in-the-Head (VOLEitH) プロトコルでは、このGGMツリーを用いたAll-but-Oneコミットメントが、特に$N$個のシードの中から、チャレンジで指定された1個のシードを除いた$N-1$個の情報を効率的に転送する（All-but-One OTの文脈で）ために利用される。
+これにより、検証者が秘密のグローバルキー$\Delta$を持つ代わりに、証明者自身が$\Delta$の元となる情報にコミットし、公開検証可能性を実現する。
+
+プロトコルは以下のように進行する。
+\begin{description}
+    \item[ステップ1: GGMツリー構築とコミットメント]
+    まず、セキュリティパラメータ$\lambda$に対して、入力シードを2倍の長さの出力に拡張するPRG $G: \{0,1\}^\lambda \to \{0,1\}^{2\lambda}$ を定義し、$G(s) = (s_0, s_1)$ とする。証明者は、ランダムなルートシード$s_{root} \in \{0,1\}^\lambda$を選択する。
+    深さ$d = \log N$のGGMツリーは、このルートシードからPRGを再帰的に適用することで構築される。各ノードは、その親ノード$s_{parent}$から$G(s_{parent})$によって2つの子ノードシード（$s_0, s_1$）が生成される形で展開される。具体的には、インデックス$i \in \{0, \ldots, N-1\}$の$d$ビット表現を$i_1i_2\dots i_d$とすると、リーフ（葉）シード$sd_i$は、ルートからパス$i_1\dots i_d$を辿って$sd_i = s_{i_1\dots i_d}$として計算される。
+    証明者は、こうして得られた$N$個の全てのリーフシード$\{sd_i\}_{i=0}^{N-1}$に対してハッシュ関数$H$を適用し、ハッシュ値$h_{com}=H(sd_0, \ldots, sd_{N-1})$を計算して、これをコミットメントとして公開する。
+
+    \item[ステップ2: VOLE値の計算]
+    証明者は、各リーフシード$sd_i$をさらに別のPRG（$G'$とする）で展開してランダムな文字列$r_i = G'(sd_i)$を得て、自身の秘密VOLE値$\mathbf{u}, \mathbf{v}$を以下のように計算する。
+    \begin{align}
+        \mathbf{u} &= \sum_{i=0}^{N-1} r_i \\
+        \mathbf{v} &= \sum_{i=0}^{N-1} i \cdot r_i
+    \end{align}
+
+    \item[ステップ3: チャレンジと開示 (All-but-One OT)]
+    証明の主要部分が構成された後、Fiat-Shamir変換により、証明全体のトランスクリプトからチャレンジ$\Delta \in \{0, \ldots, N-1\}$が導出される。この$\Delta$が開示を免除される（すなわち秘匿される）インデックスとなる。
+    証明者は、GGMツリーにおいて$sd_\Delta$を隠したまま残りの全てのシードを開示するため、ルートから$sd_\Delta$に至るパス上の各ノードの\textbf{兄弟ノード}（sibling node）のシードを開示情報$pdecom$として証明に含める。$\Delta$のビット表現を$\Delta_1\dots\Delta_d$とすると、$pdecom$は以下の$\log N$個のシードの集合である。
+    \begin{equation}
+        pdecom = \{ s_{\Delta_1\dots\Delta_{j-1}\bar{\Delta}_j} \}_{j=1}^d, \quad \text{ここで } \bar{\Delta}_j = 1-\Delta_j
+    \end{equation}
+    この$pdecom$に含まれる兄弟ノードのシードは、$\Delta$に続くパスとは異なる全てのパスを再構築するのに必要な情報を提供する。
+
+    \item[ステップ4: 検証]
+    検証者は、まず証明者と同様にFiat-Shamir変換で$\Delta$を導出する。次に、$pdecom$に含まれる$\log N$個の兄弟ノードのシードを用いて、$\Delta$以外の全てのインデックス$i \neq \Delta$に対応するリーフシード$sd_i$を再計算する。この再計算が可能であるのは、$i$と$\Delta$のビット表現が最初に異なる位置を$j$とすると、$sd_i$の計算に必要なプレフィックス$i_1\dots i_j$を持つノードのシードが$pdecom$に含まれる$s_{\Delta_1\dots\Delta_{j-1}\bar{\Delta}_j}$（ここで $i_j = \bar{\Delta}_j$）から計算を開始できるためである。
+    検証者は、復元した$N-1$個のリーフシードと、公開されている$h_{com}$が正しく再構成できることを確認し、開示の正当性を検証する。最後に、これらのシードと$\Delta$を用いてVOLEキー$\mathbf{q}$を計算し、VOLE相関$q_i = u_i \Delta + v_i$の検証へと進む。
+\end{description}
+
+VOLEitHプロトコルによって生成される非対話証明は、ここまで説明したGGMツリーのコミットメント $h_{com}$ と、チャレンジ $\Delta$ に対応する開示情報 $pdecom$ に加えて、算術回路全体の計算の正当性を示すための情報を含んでいる。
+VOLEの準同型性により、加算のような線形演算の検証は追加の証明情報を必要としない。一方で、回路内の\textbf{全ての乗算ゲート}については、その一つ一つが2.3節で述べた\textbf{乗算検定}をパスすることを証明しなければならない。
+そのため、VOLEitHの証明には、回路内の全乗算ゲートに対応する検証情報（各ゲートの $a_0, a_1$ に相当する値）が埋め込まれることになる。
+
+結果として、VOLEitHの証明サイズは、GGMツリーのパラメータに依存する比較的小さな固定部分と、\textbf{検証対象の算術回路に含まれる乗算ゲートの数にほぼ比例して増加する可変部分}から構成される。この特性は、計算が複雑になるほど証明が長くなることを意味し、次節で述べるGroth16のように、回路の規模によらず証明サイズが一定となるSNARKsとは対照的である。本研究におけるベンチマークでは、この証明サイズのスケール特性を定量的に評価する。
+
+\subsection{Groth16}
+まず、Groth16を理解するために、zk-SNARKs（zero-knowledge Succinct Non-interactive ARguments of Knowledge）について説明する。
+zk-SNARKsは、以下の性質を持つ暗号学的証明システムである。
 \begin{itemize}
-    \item \textbf{証明サイズの固定性}: Groth16の証明サイズは一定（本稿では1055バイト）で、回路規模が増えてもcalldata課金は増えない。
-    \item \textbf{公開入力の削減}: MSMコストは公開入力数に線形。ハッシュ圧縮等で項目数を抑える。
-    \item \textbf{検証鍵の配置}: コントラクトサイズ上限を考慮し、検証鍵を分離・共有する設計をとる。
-    \item \textbf{フィールド整合性}: 証明生成・検証ともBN254を用いる。別曲線を選ぶ場合は専用プリコンパイルやロールアップを前提とする。
+    \item \textbf{ゼロ知識 (Zero-Knowledge)}
+    \item \textbf{簡潔性 (Succinctness)}
+    \item \textbf{非対話性 (Non-interactive)}
+    \textbf{知識の論拠 (ARgument of Knowledge)}
 \end{itemize}
+Groth16は、このようなzk-SNARKsの中でも特に効率的で広く利用されている方式の一つであり、特にその証明サイズの小ささと検証の速さで知られている。
+ブロックチェーンのように検証コストが重視される環境においては、特に強力な選択肢となる。
+
+Groth16プロトコルは主に3つのアルゴリズムから構成される：
+Groth16は、算術回路として表現された計算を、R1CS（Rank-1 Constraint System）と呼ばれる制約システムに変換し、さらにこれをQuadratic Arithmetic Program (QAP) へと変換することで証明を構築する。QAPは、ある多項式が特定の根を持つかどうかを検証する問題に帰着され、これにより複雑な計算の正当性を効率的に検証可能となる。
+
+このプロトコルは、楕円曲線上のペアリングの性質を最大限に活用し、高い効率性を実現している。
+\begin{description}
+    \item[Setup ($\mathcal{C} \to (\text{pk}, \text{vk})$)]
+    このフェーズでは、証明対象の計算をR1CS形式で表現された算術回路 $\mathcal{C}$ から、証明鍵（Proving Key, pk）と検証鍵（Verification Key, vk）を生成する。このプロセスは回路ごとに一度だけ実行され、通常Trusted Setupとして知られる。このセットアップでは、ランダムに選択された秘密のパラメータ $s, \alpha, \beta, \gamma, \delta \in \mathbb{F}_p^*$ を用いて、Common Reference String (CRS) が生成される。このCRSには、$G_1, G_2$ 上の様々な群要素の組 $([s^i]_1, [s^i]_2)$, $([\alpha]_1, [\alpha]_2)$, $([\beta]_1, [\beta]_2)$, $([\gamma]_1, [\gamma]_2)$, $([\delta]_1, [\delta]_2)$, $([\beta s^i]_1)$, $([\gamma s^i]_1)$, $([s^i \text{poly}(x)]_1)$ などが含まれる。ここで $\mathbb{G}_1, \mathbb{G}_2$ は楕円曲線上の点からなる群であり、$[X]_1, [X]_2$ はそれぞれ $\mathbb{G}_1, \mathbb{G}_2$ における $X$ の楕円曲線乗算を意味する。このCRS生成時に用いられた秘密のパラメータ（toxic waste）が漏洩すると、不正な証明を生成可能になるため、その破棄が極めて重要である。
+    \item[Prove ($\text{pk}, x, w \to \pi$)]
+    証明者は、証明鍵 pk、公開入力 $x$、および秘密入力 $w$ を用いて、命題が真であることの証明 $\pi = (A, B, C)$ を生成する。この証明は、QAPの解に対応する特定の多項式 $h(s)$ やその他のランダム性 $r, t \in \mathbb{F}_p^*$ を用いて、$\mathbb{G}_1$ および $\mathbb{G}_2$ 上の3つの群要素 $A \in \mathbb{G}_1, B \in \mathbb{G}_2, C \in \mathbb{G}_1$ として構築される。具体的には、$A = [A_w(s) + r\delta]_1$, $B = [B_w(s) + t\delta]_2$ または $B = [B_w(s) + t\delta]_1$, $C = [C_w(s) + (h(s)T(s) + \frac{A_w(s) \beta + B_w(s)\alpha + \gamma}{r\delta})]_1$ のような形式をとる（具体的な形式はGroth16論文参照）。ここで $A_w(s), B_w(s), C_w(s)$ は公開入力と秘密入力 $w$ から導出される多項式である。
+    \item[Verify ($\text{vk}, x, \pi \to \{\text{True}, \text{False}\}$)]
+    検証者は、検証鍵 vk、公開入力 $x$、および証明 $\pi = (A, B, C)$ を受け取り、その正当性を検証する。検証は、CRSに含まれる要素と証明 $\pi$ の群要素を用いて、以下のペアリング方程式が成立するかどうかを確認することによって行われる。
+    \begin{equation}
+        e(A, B) = e([\text{A_input}(x)]_1, [\text{B_input}(x)]_2) \cdot e(C, [\delta]_2)
+    \end{equation}
+    ここで $e$ は楕円曲線上の双線形ペアリング演算を意味する。この検証は、回路の規模に関わらず固定長の証明と数回のペアリング演算で行われるため、極めて高速である。
+\end{description}
+
+Groth16の証明は常に一定のサイズであり、通常3つの群要素（$\mathbb{G}_1$の元2つ、$\mathbb{G}_2$の元1つ）で構成される。この効率性の代償として、回路ごとに異なるTrusted Setupが必要であり、汎用性（universality）に欠けるというトレードオフが存在する。
